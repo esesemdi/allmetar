@@ -1,0 +1,83 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Java 17
+        run: |
+          if [ -n "$JAVA_HOME_17_X64" ]; then
+            echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          fi
+
+      - name: Signing key
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          KS="$RUNNER_TEMP/allmetar.p12"
+          SIGNING=""
+          if [ -n "$SIGNING_KEYSTORE_B64" ]; then
+            if printf '%s' "$SIGNING_KEYSTORE_B64" | tr -d ' \n\r\t' | base64 -d > "$KS" 2>/dev/null \
+               && keytool -list -keystore "$KS" -storepass allmetar -alias allmetar > /dev/null 2>&1; then
+              SIGNING="permanent key - installs over the previous version"
+            else
+              echo "::warning::The SIGNING_KEYSTORE_B64 secret is not a usable keystore. Using a temporary key."
+              rm -f "$KS"
+            fi
+          fi
+          if [ -z "$SIGNING" ]; then
+            keytool -genkeypair -storetype PKCS12 -keystore "$KS" -alias allmetar -keyalg RSA -keysize 2048 \
+              -validity 10950 -storepass allmetar -keypass allmetar -dname "CN=AllMetar temporary build key"
+            SIGNING="temporary key - uninstall the previous version before installing this one"
+          fi
+          echo "Signing with: $SIGNING"
+          echo "SIGNING=$SIGNING" >> "$GITHUB_ENV"
+          echo "ALLMETAR_KEYSTORE=$KS" >> "$GITHUB_ENV"
+
+      - name: Test and build
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk allmetar.apk
+          TAG="v1.0.${{ github.run_number }}"
+          gh release create "$TAG" allmetar.apk \
+            --target "$GITHUB_SHA" \
+            --title "AllMetar $TAG" \
+            --notes "Download **allmetar.apk** on your Android phone and open it to install. Signed with: $SIGNING."
+
+      - name: Keep the build log
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/cilog" && cd "$RUNNER_TEMP/cilog"
+          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then tail -c 300000 "$GITHUB_WORKSPACE/build.log" > build.log; else echo "no build log" > build.log; fi
+          echo "run $GITHUB_RUN_NUMBER  sha $GITHUB_SHA  status ${{ job.status }}  signing: $SIGNING" > status.txt
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "Build log for run $GITHUB_RUN_NUMBER"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-log

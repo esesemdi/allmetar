@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AllMetar</string>
+    <string name="widget_label">Current METAR</string>
+    <string name="widget_description">The current METAR of one of your saved locations.</string>
+    <string name="widget_sample" translatable="false">CYWG 251400Z 19011KT 15SM FEW040 BKN120 M04/M08 A3041 RMK CU2AC4 SLP315</string>
+</resources>

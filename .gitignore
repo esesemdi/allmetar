@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+# signing keys never belong in the repository
+*.p12
+*.jks
+*.keystore
