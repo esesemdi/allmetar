@@ -1,0 +1,159 @@
+Downloading https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 8.11.1!
+
+Here are the highlights of this release:
+ - Parallel load and store for Configuration Cache
+ - Java compilation errors at the end of the build output
+ - Consolidated report for warnings and deprecations
+
+For more details see https://docs.gradle.org/8.11.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:javaPreCompileRelease
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:mergeReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:preReleaseUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileReleaseUnitTest
+> Task :app:processReleaseJavaRes NO-SOURCE
+> Task :app:processReleaseUnitTestJavaRes NO-SOURCE
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs NO-SOURCE
+> Task :app:stripReleaseDebugSymbols NO-SOURCE
+> Task :app:extractReleaseNativeSymbolTables NO-SOURCE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeExtDexRelease
+> Task :app:mergeReleaseAssets
+> Task :app:processReleaseResources
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:compressReleaseAssets
+
+> Task :app:compileReleaseJavaWithJavac
+Note: /home/runner/work/allmetar/allmetar/app/src/main/java/io/github/esesemdi/allmetar/AddActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:bundleReleaseClassesToRuntimeJar
+> Task :app:bundleReleaseClassesToCompileJar
+> Task :app:dexBuilderRelease
+> Task :app:compileReleaseUnitTestJavaWithJavac
+
+> Task :app:testReleaseUnitTest
+
+AirportIndexTest > identifiersAreUniqueAndStorable PASSED
+
+AirportIndexTest > searchByCodeNameAndCity PASSED
+
+AirportIndexTest > smallAndUsAerodromesAreThere PASSED
+
+AirportIndexTest > winnipegHasItsRunwaysAndFrequencies PASSED
+
+FeedsTest > metarsAreGroupedByStationAndKeptRaw PASSED
+
+FeedsTest > notamsAreUnwrappedAndAerodromeOnesComeFirst PASSED
+
+FeedsTest > emptyMetarAnswerMeansNoReports PASSED
+
+FeedsTest > errorAnswersAreNotMistakenForData PASSED
+
+FeedsTest > tafs PASSED
+
+FeedsTest > urls PASSED
+
+FeedsTest > noNotamsIsDifferentFromAFailedAnswer PASSED
+
+HistoryTest > routineReportBeatsACloserSpeci PASSED
+
+HistoryTest > usStationsReportBeforeTheHour PASSED
+
+HistoryTest > fixtureTimesAreWhatTheySay PASSED
+
+HistoryTest > speciIsUsedWhenThereIsNothingElse PASSED
+
+HistoryTest > latestFive PASSED
+
+HistoryTest > eightPerDayForAWeek PASSED
+
+HistoryTest > gapsAreShownAsMissing PASSED
+
+HistoryTest > slotWhoseReportIsNotOutYetIsLeftOut PASSED
+
+JsonTest > rejectsBrokenInput PASSED
+
+JsonTest > handlesEscapes PASSED
+
+JsonTest > parsesNestedValues PASSED
+
+JsonTest > roundTrips PASSED
+
+JsonTest > missingAndNullValuesUseDefaults PASSED
+
+StoreTest > survivesARestart PASSED
+
+StoreTest > holdsAtMostTenLocations PASSED
+
+StoreTest > aRemovedLocationIsNotBroughtBackByALateUpdate PASSED
+
+StoreTest > refusesDuplicatesAndBadIdentifiers PASSED
+
+StoreTest > damagedFilesDoNotCrash PASSED
+
+StoreTest > countryGuessFromIdentifier PASSED
+
+SyncTest > forecastsAccumulateAndOldOnesAreDropped PASSED
+
+SyncTest > addingALocationLoadsAWeekOfHistory PASSED
+
+SyncTest > aGapAfterBeingOfflineIsFilledIn PASSED
+
+SyncTest > aLocationWithoutWeatherReportsIsNotAskedForAWeekOfThem PASSED
+
+SyncTest > listenerHearsAboutChanges PASSED
+
+SyncTest > aFailedRefreshKeepsWhatWasThereAndSaysWhy PASSED
+
+SyncTest > veryFrequentReportsBeyondTheFeedLimitAreFetchedInSmallerWindows PASSED
+
+SyncTest > hourlyRefreshIsOneWeatherRequestForAllLocations PASSED
+
+TafFormatTest > onlyWhitespaceChanges PASSED
+
+TafFormatTest > oneChangeGroupPerLine PASSED
+
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:collectReleaseDependencies
+> Task :app:mergeReleaseJavaResource
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:optimizeReleaseResources
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+[Incubating] Problems report is available at: file:///home/runner/work/allmetar/allmetar/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 43s
+43 actionable tasks: 43 executed
