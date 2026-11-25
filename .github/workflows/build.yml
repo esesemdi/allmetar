@@ -82,15 +82,15 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk allmetar.apk
           TAG="v1.0.${{ github.run_number }}"
           NOTES="Download **allmetar.apk** on your Android phone and open it to install. Signed with: $SIGNING."
-          # GitHub's API occasionally answers with a server error; try a few times
-          for attempt in 1 2 3 4 5; do
+          # GitHub's API occasionally answers with a server error; keep trying for about ten minutes
+          for attempt in $(seq 1 15); do
             if gh release view "$TAG" > /dev/null 2>&1; then
               if gh release upload "$TAG" allmetar.apk --clobber; then exit 0; fi
             else
               if gh release create "$TAG" allmetar.apk --target "$GITHUB_SHA" --title "AllMetar $TAG" --notes "$NOTES"; then exit 0; fi
             fi
-            echo "Publishing failed (attempt $attempt); retrying in 20 s"
-            sleep 20
+            echo "Publishing failed (attempt $attempt); retrying in 40 s"
+            sleep 40
           done
           exit 1
 
