@@ -1,0 +1,69 @@
+name: Feed probe (temporary)
+on:
+  push:
+    branches: [ci-probe]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Measure feed latency and capture samples
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out && cd out
+          UA="AllMetar-dev-probe (+https://github.com/esesemdi/allmetar)"
+          date -u > when.txt
+          curl -sS -A "$UA" "https://aviationweather.gov/api/data/metar?ids=CYWG,CYAV,CYBR,CYQR,CYYZ,CYVR,CYXE&format=json&hours=30" -o awc-ca.json -w "awc-ca %{http_code}\n" | tee -a http.txt
+          sleep 1
+          curl -sS -A "$UA" "https://aviationweather.gov/api/data/metar?ids=KGFK,KMSP,KFAR,KORD,KBIS&format=json&hours=30" -o awc-us.json -w "awc-us %{http_code}\n" | tee -a http.txt
+          sleep 1
+          curl -sS -A "$UA" -D headers-latest.txt "https://aviationweather.gov/api/data/metar?ids=CYWG,KGFK&format=json&hours=4" -o latest.json -w "latest %{http_code}\n" | tee -a http.txt
+          sleep 1
+          curl -sS -A "$UA" -D headers-empty.txt "https://aviationweather.gov/api/data/metar?ids=CKK7&format=json&hours=3" -o empty.txt -w "empty %{http_code} size %{size_download}\n" | tee -a http.txt
+          sleep 1
+          curl -sS -A "$UA" -D headers-taf-empty.txt "https://aviationweather.gov/api/data/taf?ids=CKK7&format=json" -o taf-empty.txt -w "taf-empty %{http_code} size %{size_download}\n" | tee -a http.txt
+          sleep 1
+          curl -sS -A "$UA" "https://aviationweather.gov/api/data/metar?ids=CYWG&format=json&hours=168" -o week.json -w "week %{http_code}\n" | tee -a http.txt
+          curl -sS -A "$UA" "https://plan.navcanada.ca/weather/api/alpha/?site=CYWG&alpha=metar&alpha=taf" -o cfps-wx.json -w "cfps-wx %{http_code}\n" | tee -a http.txt
+          curl -sS -A "$UA" "https://plan.navcanada.ca/weather/api/alpha/?site=CKK7&alpha=notam" -o cfps-ckk7-notam.json -w "cfps-ckk7 %{http_code}\n" | tee -a http.txt
+          python3 - <<'PY' | tee latency.txt
+          import json, statistics, datetime
+          def iso(s):
+              return datetime.datetime.fromisoformat(s.replace('Z', '+00:00')).timestamp()
+          for name in ('awc-ca.json', 'awc-us.json'):
+              data = json.load(open(name))
+              print(name, 'entries', len(data))
+              by = {}
+              for m in data:
+                  if m.get('metarType') != 'METAR':
+                      continue
+                  d = (iso(m['receiptTime']) - m['obsTime']) / 60.0
+                  top = ((m['obsTime'] + 1800) // 3600) * 3600
+                  after = (iso(m['receiptTime']) - top) / 60.0
+                  by.setdefault(m['icaoId'], []).append((d, after))
+              for k, v in sorted(by.items()):
+                  d = sorted(x[0] for x in v)
+                  a = sorted(x[1] for x in v)
+                  n = len(d)
+                  print('%s n=%d  receipt-obs min: min %.1f med %.1f p90 %.1f max %.1f | receipt minutes past the hour: med %.1f p90 %.1f max %.1f | >10min past: %d  >15: %d  >20: %d' % (
+                      k, n, d[0], statistics.median(d), d[int(n * 0.9) - 1], d[-1],
+                      statistics.median(a), a[int(n * 0.9) - 1], a[-1],
+                      sum(1 for x in a if x > 10), sum(1 for x in a if x > 15), sum(1 for x in a if x > 20)))
+          w = json.load(open('week.json'))
+          print('week entries', len(w), 'oldest', datetime.datetime.utcfromtimestamp(w[-1]['obsTime']), 'newest', datetime.datetime.utcfromtimestamp(w[0]['obsTime']))
+          c = json.load(open('cfps-wx.json'))
+          print('cfps meta', json.dumps(c.get('meta')))
+          for e in c.get('data', [])[:40]:
+              print('cfps', e.get('type'), e.get('location'), e.get('startValidity'), e.get('endValidity'), repr(e.get('text'))[:230])
+          PY
+          head -c 1500 latest.json > latest-head.json
+          head -c 3000 cfps-ckk7-notam.json > cfps-ckk7-notam-head.json
+          rm -f awc-ca.json awc-us.json week.json latest.json cfps-wx.json cfps-ckk7-notam.json
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "probe output"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-probe-out
