@@ -51,11 +51,29 @@ jobs:
           echo "SIGNING=$SIGNING" >> "$GITHUB_ENV"
           echo "ALLMETAR_KEYSTORE=$KS" >> "$GITHUB_ENV"
 
+      - name: Cache Gradle downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
       - name: Test and build
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew --no-daemon --stacktrace testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+          attempt=1
+          until ./gradlew --no-daemon --stacktrace testReleaseUnitTest assembleRelease 2>&1 | tee build.log; do
+            # retry only when a download failed (the package servers sometimes rate-limit build machines)
+            if [ "$attempt" -ge 4 ] || ! grep -q -E "status code (429|5[0-9][0-9])|Could not (GET|HEAD)|Connection reset|timed out" build.log; then
+              exit 1
+            fi
+            attempt=$((attempt + 1))
+            echo "Dependency download failed; retrying in 60 s (attempt $attempt)"
+            sleep 60
+          done
 
       - name: Publish release
         env:
