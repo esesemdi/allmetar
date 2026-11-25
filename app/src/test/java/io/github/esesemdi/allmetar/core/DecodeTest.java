@@ -294,6 +294,19 @@ public class DecodeTest {
         assertEquals("Percent.", say(Decode.NOTAM, NOTAM_RWY, "PCT"));
         assertNull("a phone number is not a date", say(Decode.NOTAM, NOTAM_RWY, "2045551234.)"));
         assertNull(say(Decode.NOTAM, NOTAM_RWY, "DRY."));
+        String rsc = "(S0234/26 NOTAMR S0205/26\nQ) CZWG/QFAXX/IV/NBO/A/000/999/4955N09714W005\n"
+                + "A) CYWG B) 2611251408 C) 2611252208\nE) RSC 13 5/5/6 50 PCT FROST. NO\nC.R.F.I. DUE TO HIGH "
+                + "FRICTION VALUES. VALID NOV 25 1404.\nADDN NON-GRF/TALPA INFO:\nRMK: TWY ALPHA, 202611251358, FROST.)";
+        assertEquals("Runway 13.", say(Decode.NOTAM, rsc, "13"));
+        assertTrue(say(Decode.NOTAM, rsc, "5/5/6").startsWith("Runway condition code"));
+        assertEquals("Canadian runway friction index.", say(Decode.NOTAM, rsc, "C.R.F.I."));
+        assertEquals("November.", say(Decode.NOTAM, rsc, "NOV"));
+        assertEquals("Additional.", say(Decode.NOTAM, rsc, "ADDN"));
+        assertEquals("Remark.", say(Decode.NOTAM, rsc, "RMK:"));
+        assertEquals("Taxiway.", say(Decode.NOTAM, rsc, "TWY"));
+        assertEquals("25 Nov 2026 at 13:58 UTC.", say(Decode.NOTAM, rsc, "202611251358,"));
+        assertNull(say(Decode.NOTAM, rsc, "VALID"));
+        assertNull(say(Decode.NOTAM, rsc, "NO"));
     }
 
     @Test

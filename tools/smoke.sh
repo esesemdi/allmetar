@@ -107,6 +107,7 @@ shot cywg-notams
 press_in text "~Q) CZ" 230 92
 sleep 2
 shot decode-notam-qualifier
+tap text AERODROME; sleep 1
 press_in text "~Q) CZ" 60 182
 sleep 2
 shot decode-notam-word
@@ -116,12 +117,15 @@ shot cywg-metar
 press_in text "~KT " 330 46
 sleep 2
 shot decode-metar-wind
+tap text METAR; sleep 1
 press_in text "~KT " 60 46
 sleep 2
 shot decode-metar-station
+tap text METAR; sleep 1
 press_in text "~KT " 480 46
 sleep 2
 shot decode-metar-third
+tap text METAR; sleep 1
 press_in text "~KT " 200 92
 sleep 2
 shot decode-metar-second-line
@@ -135,6 +139,7 @@ shot cywg-taf
 press_in text "~TAF " 40 46
 sleep 2
 shot decode-taf-first
+tap text TAF; sleep 1
 press_in text "~TAF " 120 137
 sleep 2
 shot decode-taf-change-group

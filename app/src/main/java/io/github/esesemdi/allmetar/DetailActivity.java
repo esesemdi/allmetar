@@ -419,8 +419,9 @@ public final class DetailActivity extends Activity {
         }
         y = Math.max(margin, Math.min(y, windowHeight - boxHeight - margin));
 
-        final PopupWindow p = new PopupWindow(box, ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, false);
+        // Exact size: a wrap-content window is laid out narrower than this measurement on some
+        // devices, which would re-wrap the text and make the box taller than the space reserved.
+        final PopupWindow p = new PopupWindow(box, boxWidth, boxHeight, false);
         p.setBackgroundDrawable(new ColorDrawable(0));
         p.setOutsideTouchable(true);
         p.setOnDismissListener(() -> {

@@ -87,7 +87,6 @@ final class Scheduler {
         extras.putInt(EXTRA_ATTEMPT, attempt);
         js.schedule(job(c, JOB_FOLLOW_UP)
                 .setMinimumLatency(FOLLOW_UP_DELAY_MS)
-                .setOverrideDeadline(FOLLOW_UP_DELAY_MS + 4 * MINUTE_MS)
                 .setExtras(extras)
                 .build());
     }

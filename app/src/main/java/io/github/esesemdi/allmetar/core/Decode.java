@@ -694,6 +694,9 @@ public final class Decode {
         if (t.isEmpty()) {
             return null;
         }
+        if (t.matches("([A-Z]\\.){2,}[A-Z]?")) {
+            t = t.replace(".", ""); // C.R.F.I. is CRFI
+        }
 
         Matcher m = NOTAM_ID.matcher(t);
         if (m.matches() && (field.isEmpty() || field.equals("E"))) {
