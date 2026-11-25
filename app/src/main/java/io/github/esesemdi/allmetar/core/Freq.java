@@ -10,11 +10,18 @@ public final class Freq {
     public final String desc;
     /** Frequency in MHz, as text. */
     public final String mhz;
+    /** True when the user entered or changed this line. */
+    public final boolean mine;
 
     public Freq(String type, String desc, String mhz) {
+        this(type, desc, mhz, false);
+    }
+
+    public Freq(String type, String desc, String mhz, boolean mine) {
         this.type = type;
         this.desc = desc;
         this.mhz = mhz;
+        this.mine = mine;
     }
 
     /** "118.3" -> "118.300"; values that are not plain numbers are returned unchanged. */
@@ -33,10 +40,13 @@ public final class Freq {
         m.put("t", type);
         m.put("d", desc);
         m.put("f", mhz);
+        if (mine) {
+            m.put("u", Boolean.TRUE);
+        }
         return m;
     }
 
     static Freq fromJson(Map<String, Object> m) {
-        return new Freq(Json.str(m, "t", ""), Json.str(m, "d", ""), Json.str(m, "f", ""));
+        return new Freq(Json.str(m, "t", ""), Json.str(m, "d", ""), Json.str(m, "f", ""), Json.bool(m, "u", false));
     }
 }

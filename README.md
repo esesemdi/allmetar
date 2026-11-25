@@ -25,6 +25,11 @@ Long-press the widget to change its location later.
 | Aerodrome | Frequencies, runways, elevation | OurAirports (bundled, community data) |
 | Aerodrome | NOTAMs (Canadian aerodromes) | NAV CANADA CFPS |
 
+Press any word of a METAR, TAF or NOTAM on a location's screen to see what it means; press and hold
+to copy the whole report. On the Aerodrome tab, **Edit aerodrome data** lets you change or add
+frequencies, runways and the elevation, and add your own fields (a heading and free text). Lines you
+entered are marked "yours", and the built-in data can be restored at any time.
+
 The app updates in the background at about ten past every hour (when that hour's reports have
 reached the feed), checks again a few times if a report is late, and catches up as soon as the
 connection returns after being offline. It also updates whenever it is opened with data older than

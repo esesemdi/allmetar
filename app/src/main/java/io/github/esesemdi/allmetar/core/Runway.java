@@ -12,9 +12,17 @@ public final class Runway {
     public final String surface;
     public final boolean lighted;
     public final boolean closed;
+    /** True when the user entered or changed this line. */
+    public final boolean mine;
 
     public Runway(String lowEnd, String highEnd, String lengthFt, String widthFt, String surface,
                   boolean lighted, boolean closed) {
+        this(lowEnd, highEnd, lengthFt, widthFt, surface, lighted, closed, false);
+    }
+
+    public Runway(String lowEnd, String highEnd, String lengthFt, String widthFt, String surface,
+                  boolean lighted, boolean closed, boolean mine) {
+        this.mine = mine;
         this.lowEnd = lowEnd;
         this.highEnd = highEnd;
         this.lengthFt = lengthFt;
@@ -43,11 +51,15 @@ public final class Runway {
         m.put("s", surface);
         m.put("lgt", lighted);
         m.put("c", closed);
+        if (mine) {
+            m.put("u", Boolean.TRUE);
+        }
         return m;
     }
 
     static Runway fromJson(Map<String, Object> m) {
         return new Runway(Json.str(m, "l", ""), Json.str(m, "h", ""), Json.str(m, "len", ""), Json.str(m, "w", ""),
-                Json.str(m, "s", ""), Json.bool(m, "lgt", false), Json.bool(m, "c", false));
+                Json.str(m, "s", ""), Json.bool(m, "lgt", false), Json.bool(m, "c", false),
+                Json.bool(m, "u", false));
     }
 }

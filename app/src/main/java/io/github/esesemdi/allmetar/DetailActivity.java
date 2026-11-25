@@ -3,16 +3,34 @@ package io.github.esesemdi.allmetar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.Layout;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.BackgroundColorSpan;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -21,12 +39,15 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.esesemdi.allmetar.core.Airport;
+import io.github.esesemdi.allmetar.core.Decode;
 import io.github.esesemdi.allmetar.core.Freq;
 import io.github.esesemdi.allmetar.core.History;
 import io.github.esesemdi.allmetar.core.Metar;
 import io.github.esesemdi.allmetar.core.Notam;
+import io.github.esesemdi.allmetar.core.Note;
 import io.github.esesemdi.allmetar.core.Runway;
 import io.github.esesemdi.allmetar.core.Station;
+import io.github.esesemdi.allmetar.core.Store;
 import io.github.esesemdi.allmetar.core.Sync;
 import io.github.esesemdi.allmetar.core.Taf;
 import io.github.esesemdi.allmetar.core.TafFormat;
@@ -38,19 +59,26 @@ public final class DetailActivity extends Activity {
 
     private static final String PREFS = "ui";
     private static final String KEY_TAB = "tab";
+    private static final String KEY_EDITING = "editing";
     private static final String[] TABS = {"AERODROME", "METAR", "TAF"};
 
     private String id;
     private int tab;
+    /** True while the aerodrome tab is in edit mode. */
+    private boolean editing;
     private TextView nameView;
     private TextView status;
     private final TextView[] tabLabels = new TextView[TABS.length];
     private final View[] tabMarks = new View[TABS.length];
     private ScrollView scroll;
     private LinearLayout content;
+    private PopupWindow popup;
+    /** Set by a long press so that lifting the finger does not also count as a tap on the word. */
+    private boolean longPressed;
 
     private Station shown;
     private boolean shownBusy;
+    private boolean shownEditing;
     private int shownTab = -1;
     private final Runnable onChange = this::render;
 
@@ -68,6 +96,7 @@ public final class DetailActivity extends Activity {
         if (tab < 0 || tab >= TABS.length) {
             tab = 0;
         }
+        editing = state != null && state.getBoolean(KEY_EDITING, false);
 
         LinearLayout root = Ui.column(this);
         root.setBackgroundColor(Ui.BG);
@@ -81,7 +110,7 @@ public final class DetailActivity extends Activity {
         bar.addView(back);
         LinearLayout titles = Ui.column(this);
         TextView title = Ui.text(this, id, 19, Ui.FG, true);
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setTypeface(title.getTypeface(), Typeface.BOLD);
         titles.addView(title, Ui.fill());
         nameView = Ui.oneLine(Ui.text(this, "", 12, Ui.DIM, false));
         titles.addView(nameView, Ui.fill());
@@ -142,6 +171,7 @@ public final class DetailActivity extends Activity {
     @Override
     protected void onStop() {
         App.removeListener(onChange);
+        dismissPopup();
         super.onStop();
     }
 
@@ -149,6 +179,20 @@ public final class DetailActivity extends Activity {
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt(KEY_TAB, tab);
+        out.putBoolean(KEY_EDITING, editing);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        if (popup != null) {
+            dismissPopup();
+        } else if (editing && tab == 0) {
+            editing = false;
+            render();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void goBack() {
@@ -181,13 +225,15 @@ public final class DetailActivity extends Activity {
             return;
         }
         boolean busy = Sync.isBusy();
-        if (s == shown && busy == shownBusy && tab == shownTab) {
+        if (s == shown && busy == shownBusy && tab == shownTab && editing == shownEditing) {
             return;
         }
         shown = s;
         shownBusy = busy;
         shownTab = tab;
+        shownEditing = editing;
         long now = App.now();
+        dismissPopup();
 
         nameView.setText(s.name);
         for (int i = 0; i < TABS.length; i++) {
@@ -224,21 +270,174 @@ public final class DetailActivity extends Activity {
         return add(t);
     }
 
-    private TextView raw(String s, float sp, int color) {
-        TextView t = Ui.text(this, s, sp, color, true);
-        t.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
-        t.setTextIsSelectable(true);
-        return add(t);
-    }
-
     private TextView small(String s) {
         TextView t = Ui.text(this, s, 11, Ui.DIM, false);
         t.setLetterSpacing(0.1f);
         return add(t);
     }
 
+    private TextView button(String label, View.OnClickListener l) {
+        TextView b = Ui.button(this, label, l);
+        LinearLayout.LayoutParams lp = Ui.wrap();
+        lp.topMargin = Ui.dp(this, 12);
+        content.addView(b, lp);
+        return b;
+    }
+
     private String pending(boolean busy) {
         return busy ? "Loading…" : "Not loaded yet. Tap REFRESH.";
+    }
+
+    // ------------------------------------------------------------ raw text whose words can be pressed
+
+    /** Raw report text; pressing a word explains it, a long press copies the whole report. */
+    private TextView words(final String text, float sp, int color, final int kind) {
+        final TextView t = Ui.text(this, "", sp, color, true);
+        t.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
+        final int[][] ranges = Decode.wordRanges(text);
+        final String[] tokens = new String[ranges.length];
+        SpannableString span = new SpannableString(text);
+        for (int k = 0; k < ranges.length; k++) {
+            tokens[k] = text.substring(ranges[k][0], ranges[k][1]);
+            final int index = k;
+            span.setSpan(new ClickableSpan() {
+                @Override
+                public void onClick(View widget) {
+                    if (longPressed) {
+                        longPressed = false;
+                        return;
+                    }
+                    explain(t, tokens, ranges, index, kind);
+                }
+
+                @Override
+                public void updateDrawState(TextPaint paint) {
+                    // leave the word looking like the rest of the report
+                }
+            }, ranges[k][0], ranges[k][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        t.setText(span, TextView.BufferType.SPANNABLE);
+        t.setMovementMethod(LinkMovementMethod.getInstance());
+        t.setHighlightColor(0);
+        t.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                longPressed = false;
+            }
+            return false;
+        });
+        t.setOnLongClickListener(v -> {
+            longPressed = true;
+            copy(text);
+            return true;
+        });
+        return add(t);
+    }
+
+    private void copy(String text) {
+        ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+        if (clipboard == null) {
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText("AllMetar", text));
+        if (Build.VERSION.SDK_INT < 33) { // newer Android versions show their own confirmation
+            Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void dismissPopup() {
+        PopupWindow p = popup;
+        popup = null;
+        if (p != null) {
+            try {
+                p.dismiss();
+            } catch (RuntimeException ignored) {
+                // window already gone
+            }
+        }
+    }
+
+    /** Shows a small box above (or below) the pressed word with its meaning. */
+    private void explain(TextView view, String[] tokens, int[][] ranges, int index, int kind) {
+        dismissPopup();
+        Layout layout = view.getLayout();
+        if (layout == null || !(view.getText() instanceof Spannable)) {
+            return;
+        }
+        Decode.Hit hit = Decode.decode(kind, tokens, index);
+        int from = hit == null ? index : hit.from;
+        int to = hit == null ? index : hit.to;
+        StringBuilder heading = new StringBuilder();
+        for (int k = from; k <= to; k++) {
+            heading.append(k > from ? " " : "").append(tokens[k]);
+        }
+
+        final Spannable text = (Spannable) view.getText();
+        final BackgroundColorSpan back = new BackgroundColorSpan(Ui.FG);
+        final ForegroundColorSpan fore = new ForegroundColorSpan(Ui.BG);
+        text.setSpan(back, ranges[from][0], ranges[to][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(fore, ranges[from][0], ranges[to][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        int margin = Ui.dp(this, 12);
+        int pad = Ui.dp(this, 12);
+        int windowWidth = getWindow().getDecorView().getWidth();
+        int windowHeight = getWindow().getDecorView().getHeight();
+        int maxWidth = Math.min(windowWidth - 2 * margin, Ui.dp(this, 340));
+
+        LinearLayout box = Ui.column(this);
+        GradientDrawable frame = new GradientDrawable();
+        frame.setColor(Ui.BG);
+        frame.setStroke(Math.max(1, Ui.dp(this, 1)), Ui.FG);
+        box.setBackground(frame);
+        box.setPadding(pad, pad, pad, pad);
+        TextView head = Ui.text(this, heading, 13, Ui.FG, true);
+        head.setTypeface(head.getTypeface(), Typeface.BOLD);
+        head.setMaxWidth(maxWidth - 2 * pad);
+        box.addView(head, Ui.wrap());
+        TextView body = Ui.text(this, hit == null ? "No decode for this word." : hit.text, 13,
+                hit == null ? Ui.DIM : Ui.FG, false);
+        body.setMaxWidth(maxWidth - 2 * pad);
+        body.setPadding(0, Ui.dp(this, 6), 0, 0);
+        box.addView(body, Ui.wrap());
+        box.measure(View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int boxWidth = box.getMeasuredWidth();
+        int boxHeight = box.getMeasuredHeight();
+
+        int[] at = new int[2];
+        view.getLocationInWindow(at);
+        int line = layout.getLineForOffset(ranges[index][0]);
+        int wordX = at[0] + view.getTotalPaddingLeft() + (int) layout.getPrimaryHorizontal(ranges[index][0]);
+        int lineTop = at[1] + view.getTotalPaddingTop() + layout.getLineTop(line);
+        int lineBottom = at[1] + view.getTotalPaddingTop() + layout.getLineBottom(line);
+        int[] area = new int[2];
+        scroll.getLocationInWindow(area);
+        int gap = Ui.dp(this, 6);
+        int x = Math.max(margin, Math.min(wordX, windowWidth - boxWidth - margin));
+        int y = lineTop - boxHeight - gap;
+        if (y < area[1]) {
+            y = lineBottom + gap;
+        }
+        y = Math.max(margin, Math.min(y, windowHeight - boxHeight - margin));
+
+        final PopupWindow p = new PopupWindow(box, ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, false);
+        p.setBackgroundDrawable(new ColorDrawable(0));
+        p.setOutsideTouchable(true);
+        p.setOnDismissListener(() -> {
+            text.removeSpan(back);
+            text.removeSpan(fore);
+            if (popup == p) {
+                popup = null;
+            }
+        });
+        box.setOnClickListener(v -> dismissPopup());
+        try {
+            p.showAtLocation(view, Gravity.NO_GRAVITY, x, y);
+            popup = p;
+        } catch (RuntimeException e) {
+            text.removeSpan(back);
+            text.removeSpan(fore);
+        }
     }
 
     // ------------------------------------------------------------ AERODROME
@@ -257,60 +456,111 @@ public final class DetailActivity extends Activity {
                 sb.append(sb.length() > 0 ? " · " : "").append(a.others.replace(" ", " / "));
             }
             note(sb.toString());
-            StringBuilder geo = new StringBuilder();
-            if (!a.elevFt.isEmpty()) {
-                geo.append("ELEV ").append(a.elevFt).append(" FT");
-            }
-            String pos = position(a.lat, a.lon);
-            if (!pos.isEmpty()) {
-                geo.append(geo.length() > 0 ? "  ·  " : "").append(pos);
-            }
-            if (geo.length() > 0) {
-                small(geo.toString());
-            }
         } else {
-            TextView n = Ui.text(this, "Not in the built-in aerodrome list — weather only.", 13, Ui.DIM, false);
+            TextView n = Ui.text(this, "Not in the built-in aerodrome list. Use EDIT to enter its data yourself.",
+                    13, Ui.DIM, false);
             n.setPadding(0, Ui.dp(this, 18), 0, 0);
             add(n);
         }
+        StringBuilder geo = new StringBuilder();
+        String elev = s.elevFt();
+        if (!elev.isEmpty()) {
+            geo.append("ELEV ").append(elev).append(" FT").append(s.elevEdit != null ? " (YOURS)" : "");
+        }
+        String pos = a == null ? "" : position(a.lat, a.lon);
+        if (!pos.isEmpty()) {
+            geo.append(geo.length() > 0 ? "  ·  " : "").append(pos);
+        }
+        if (geo.length() > 0) {
+            small(geo.toString());
+        }
+
+        button(editing ? "Done editing" : "Edit aerodrome data", v -> {
+            editing = !editing;
+            render();
+        });
+        if (editing) {
+            TextView hint = small("TAP A LINE TO CHANGE OR REMOVE IT.");
+            hint.setPadding(0, Ui.dp(this, 12), 0, 0);
+            line("ELEVATION", elev.isEmpty() ? "not set" : elev + " FT", "", false, v -> editElevation(s));
+        }
 
         add(Ui.heading(this, "Frequencies"));
-        boolean any = false;
-        if (a != null) {
-            for (Freq f : a.freqs) {
-                freqRow(f, null);
-                any = true;
+        List<Freq> freqs = s.freqs();
+        for (final Freq f : freqs) {
+            String d = f.desc == null ? "" : f.desc;
+            if (d.equalsIgnoreCase(f.type)) {
+                d = "";
             }
+            line(f.type, f.mhzFormatted(), d, f.mine, editing ? v -> editFreq(s, f) : null);
         }
-        for (int i = 0; i < s.userFreqs.size(); i++) {
-            final int index = i;
-            final Freq f = s.userFreqs.get(i);
-            freqRow(f, v -> {
-                confirmRemoveFreq(f, index);
-                return true;
-            });
-            any = true;
-        }
-        if (!any) {
+        if (freqs.isEmpty()) {
             note("None on file.");
         }
-        TextView addFreq = Ui.button(this, "+ Add frequency", v -> addFreqDialog());
-        LinearLayout.LayoutParams lp = Ui.wrap();
-        lp.topMargin = Ui.dp(this, 12);
-        content.addView(addFreq, lp);
-        if (a != null) {
-            TextView src = small("FREQUENCIES AND RUNWAYS: OURAIRPORTS (COMMUNITY DATA). VERIFY IN THE CFS / CHART SUPPLEMENT.");
-            src.setPadding(0, Ui.dp(this, 12), 0, 0);
+        if (editing) {
+            button("+ Add frequency", v -> editFreq(s, null));
         }
 
         add(Ui.heading(this, "Runways"));
-        if (a == null || a.runways.isEmpty()) {
-            note("None on file.");
-        } else {
-            for (Runway r : a.runways) {
-                runwayRow(r);
+        List<Runway> runways = s.runways();
+        for (final Runway r : runways) {
+            StringBuilder sb = new StringBuilder();
+            if (!r.lengthFt.isEmpty()) {
+                sb.append(r.lengthFt);
+                if (!r.widthFt.isEmpty()) {
+                    sb.append(" × ").append(r.widthFt);
+                }
+                sb.append(" FT");
+            }
+            if (!r.surface.isEmpty()) {
+                sb.append(sb.length() > 0 ? "  " : "").append(r.surface);
+            }
+            if (r.lighted) {
+                sb.append(sb.length() > 0 ? "  " : "").append("LGT");
+            }
+            if (r.closed) {
+                sb.append(sb.length() > 0 ? "  " : "").append("CLOSED");
+            }
+            TextView[] cells = line(r.designator(), sb.toString(), "", r.mine,
+                    editing ? v -> editRunway(s, r) : null);
+            if (r.closed) {
+                cells[0].setTextColor(Ui.DIM);
+                cells[1].setTextColor(Ui.DIM);
             }
         }
+        if (runways.isEmpty()) {
+            note("None on file.");
+        }
+        if (editing) {
+            button("+ Add runway", v -> editRunway(s, null));
+        }
+
+        for (final Note n : s.notes) {
+            add(Ui.heading(this, n.header.isEmpty() ? "Note" : n.header));
+            TextView body = Ui.text(this, n.text, 14, Ui.FG, false);
+            body.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 2));
+            if (editing) {
+                Ui.ripple(body);
+                body.setOnClickListener(v -> editNote(s, n));
+            } else {
+                body.setTextIsSelectable(true);
+            }
+            add(body);
+        }
+        if (editing) {
+            add(Ui.heading(this, "Your own fields"));
+            note("Add anything you want to keep with this aerodrome: circuit, fuel, phone numbers, procedures.");
+            button("+ Add field", v -> editNote(s, null));
+            if (s.hasEdits()) {
+                TextView reset = button("Reset to built-in data", v -> confirmReset());
+                ((LinearLayout.LayoutParams) reset.getLayoutParams()).topMargin = Ui.dp(this, 28);
+            }
+        }
+
+        TextView src = small(a != null
+                ? "BUILT-IN FREQUENCIES AND RUNWAYS: OURAIRPORTS (COMMUNITY DATA). LINES MARKED YOURS WERE ENTERED BY YOU. VERIFY IN THE CFS / CHART SUPPLEMENT."
+                : "LINES MARKED YOURS WERE ENTERED BY YOU. VERIFY IN THE CFS / CHART SUPPLEMENT.");
+        src.setPadding(0, Ui.dp(this, 20), 0, 0);
 
         notams(s, now, busy);
     }
@@ -326,102 +576,223 @@ public final class DetailActivity extends Activity {
         }
     }
 
-    private void freqRow(Freq f, View.OnLongClickListener onLong) {
+    /** One three-column line of aerodrome data; returns its first two text views. */
+    private TextView[] line(String first, String second, String rest, boolean mine, View.OnClickListener onClick) {
         LinearLayout row = Ui.row(this);
         row.setGravity(Gravity.TOP);
         row.setPadding(0, Ui.dp(this, 7), 0, Ui.dp(this, 7));
-        TextView type = Ui.text(this, f.type, 13, Ui.FG, true);
-        row.addView(type, new LinearLayout.LayoutParams(Ui.dp(this, 92), ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView mhz = Ui.text(this, f.mhzFormatted(), 13, Ui.FG, true);
-        row.addView(mhz, new LinearLayout.LayoutParams(Ui.dp(this, 84), ViewGroup.LayoutParams.WRAP_CONTENT));
-        String d = f.desc == null ? "" : f.desc;
-        if (d.equalsIgnoreCase(f.type)) {
-            d = "";
+        TextView a = Ui.text(this, first, 13, Ui.FG, true);
+        row.addView(a, new LinearLayout.LayoutParams(Ui.dp(this, 92), ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView b = Ui.text(this, second, 13, Ui.FG, true);
+        boolean wide = rest.isEmpty();
+        row.addView(b, wide ? Ui.weighted()
+                : new LinearLayout.LayoutParams(Ui.dp(this, 84), ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (!wide) {
+            row.addView(Ui.text(this, rest, 12, Ui.DIM, false), Ui.weighted());
         }
-        if (onLong != null) {
-            d = d.isEmpty() ? "added by you" : d + " · added by you";
+        if (mine) {
+            TextView tag = Ui.text(this, "YOURS", 10, Ui.DIM, false);
+            tag.setLetterSpacing(0.1f);
+            tag.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), 0, 0);
+            row.addView(tag, Ui.wrap());
         }
-        row.addView(Ui.text(this, d, 12, Ui.DIM, false), Ui.weighted());
-        if (onLong != null) {
-            row.setOnLongClickListener(onLong);
+        if (onClick != null) {
+            TextView arrow = Ui.text(this, "›", 16, Ui.DIM, false);
+            arrow.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 2), 0);
+            row.addView(arrow, Ui.wrap());
+            row.setOnClickListener(onClick);
             Ui.ripple(row);
         }
         content.addView(row, Ui.fill());
+        return new TextView[]{a, b};
     }
 
-    private void runwayRow(Runway r) {
-        LinearLayout row = Ui.row(this);
-        row.setGravity(Gravity.TOP);
-        row.setPadding(0, Ui.dp(this, 7), 0, Ui.dp(this, 7));
-        int color = r.closed ? Ui.DIM : Ui.FG;
-        TextView des = Ui.text(this, r.designator(), 13, color, true);
-        row.addView(des, new LinearLayout.LayoutParams(Ui.dp(this, 92), ViewGroup.LayoutParams.WRAP_CONTENT));
-        StringBuilder sb = new StringBuilder();
-        if (!r.lengthFt.isEmpty()) {
-            sb.append(r.lengthFt);
-            if (!r.widthFt.isEmpty()) {
-                sb.append(" × ").append(r.widthFt);
-            }
-            sb.append(" FT");
+    // ------------------------------------------------------------ editing
+
+    private EditText input(LinearLayout box, String hint, String value, int type) {
+        EditText e = new EditText(this);
+        e.setHint(hint);
+        e.setText(value == null ? "" : value);
+        e.setInputType(type);
+        if ((type & InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0) {
+            e.setMinLines(3);
+            e.setGravity(Gravity.TOP | Gravity.START);
+        } else {
+            e.setSingleLine(true);
         }
-        if (!r.surface.isEmpty()) {
-            sb.append(sb.length() > 0 ? "  " : "").append(r.surface);
-        }
-        if (r.lighted) {
-            sb.append(sb.length() > 0 ? "  " : "").append("LGT");
-        }
-        if (r.closed) {
-            sb.append(sb.length() > 0 ? "  " : "").append("CLOSED");
-        }
-        row.addView(Ui.text(this, sb.toString(), 13, color, true), Ui.weighted());
-        content.addView(row, Ui.fill());
+        box.addView(e, Ui.fill());
+        return e;
     }
 
-    private void addFreqDialog() {
+    private LinearLayout form() {
         LinearLayout box = Ui.column(this);
         int pad = Ui.dp(this, 20);
         box.setPadding(pad, Ui.dp(this, 8), pad, 0);
-        final EditText label = new EditText(this);
-        label.setHint("Label, e.g. ATF");
-        label.setSingleLine(true);
-        label.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
-        box.addView(label, Ui.fill());
-        final EditText mhz = new EditText(this);
-        mhz.setHint("Frequency in MHz, e.g. 123.2");
-        mhz.setSingleLine(true);
-        mhz.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        box.addView(mhz, Ui.fill());
-        new AlertDialog.Builder(this)
-                .setTitle("Add frequency")
+        return box;
+    }
+
+    private static String value(EditText e) {
+        return e.getText().toString().trim();
+    }
+
+    private void change(Store.Change change) {
+        App.store(this).update(id, change);
+        App.notifyChanged(this);
+    }
+
+    private void editFreq(Station s, final Freq old) {
+        LinearLayout box = form();
+        final EditText label = input(box, "Label, e.g. ATF", old == null ? "" : old.type,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        final EditText mhz = input(box, "Frequency in MHz, e.g. 123.2", old == null ? "" : old.mhz,
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        final EditText desc = input(box, "Description (optional)",
+                old == null || old.desc.equalsIgnoreCase(old.type) ? "" : old.desc,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
+                .setTitle(old == null ? "Add frequency" : "Edit frequency")
                 .setView(box)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Add", (d, w) -> {
-                    final String l = label.getText().toString().trim().toUpperCase(Locale.US);
-                    final String f = mhz.getText().toString().trim();
+                .setPositiveButton("Save", (d, w) -> {
+                    final String l = value(label).toUpperCase(Locale.US);
+                    final String f = value(mhz);
+                    final String ds = value(desc);
                     if (l.isEmpty() || f.isEmpty()) {
-                        Toast.makeText(this, "Enter both a label and a frequency.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Not saved: enter a label and a frequency.", Toast.LENGTH_LONG).show();
                         return;
                     }
-                    App.store(this).update(id, e -> e.userFreqs.add(new Freq(l, "", f)));
-                    App.notifyChanged(this);
+                    change(e -> {
+                        List<Freq> list = e.editableFreqs();
+                        Freq next = new Freq(l, ds, f, true);
+                        int at = old == null ? -1 : list.indexOf(old);
+                        if (at >= 0) {
+                            list.set(at, next);
+                        } else {
+                            list.add(next);
+                        }
+                    });
+                });
+        if (old != null) {
+            b.setNeutralButton("Remove", (d, w) -> change(e -> e.editableFreqs().remove(old)));
+        }
+        b.show();
+    }
+
+    private void editRunway(Station s, final Runway old) {
+        LinearLayout box = form();
+        final EditText ends = input(box, "Runway, e.g. 18/36", old == null ? "" : old.designator(),
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        final EditText length = input(box, "Length in feet", old == null ? "" : old.lengthFt,
+                InputType.TYPE_CLASS_NUMBER);
+        final EditText width = input(box, "Width in feet", old == null ? "" : old.widthFt,
+                InputType.TYPE_CLASS_NUMBER);
+        final EditText surface = input(box, "Surface, e.g. ASPHALT", old == null ? "" : old.surface,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        final CheckBox lighted = new CheckBox(this);
+        lighted.setText("Lighted");
+        lighted.setChecked(old != null && old.lighted);
+        box.addView(lighted, Ui.fill());
+        final CheckBox closed = new CheckBox(this);
+        closed.setText("Closed");
+        closed.setChecked(old != null && old.closed);
+        box.addView(closed, Ui.fill());
+        ScrollView wrap = new ScrollView(this);
+        wrap.addView(box);
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
+                .setTitle(old == null ? "Add runway" : "Edit runway")
+                .setView(wrap)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", (d, w) -> {
+                    String designator = value(ends).toUpperCase(Locale.US).replace(" ", "");
+                    if (designator.isEmpty()) {
+                        Toast.makeText(this, "Not saved: enter the runway, e.g. 18/36.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    int slash = designator.indexOf('/');
+                    final String low = slash < 0 ? designator : designator.substring(0, slash);
+                    final String high = slash < 0 ? "" : designator.substring(slash + 1);
+                    final Runway next = new Runway(low, high, value(length), value(width),
+                            value(surface).toUpperCase(Locale.US), lighted.isChecked(), closed.isChecked(), true);
+                    change(e -> {
+                        List<Runway> list = e.editableRunways();
+                        int at = old == null ? -1 : list.indexOf(old);
+                        if (at >= 0) {
+                            list.set(at, next);
+                        } else {
+                            list.add(next);
+                        }
+                    });
+                });
+        if (old != null) {
+            b.setNeutralButton("Remove", (d, w) -> change(e -> e.editableRunways().remove(old)));
+        }
+        b.show();
+    }
+
+    private void editElevation(Station s) {
+        LinearLayout box = form();
+        final EditText feet = input(box, "Elevation in feet", s.elevFt(), InputType.TYPE_CLASS_NUMBER);
+        new AlertDialog.Builder(this)
+                .setTitle("Elevation")
+                .setView(box)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", (d, w) -> {
+                    final String v = value(feet);
+                    change(e -> {
+                        boolean same = e.airport != null && e.airport.elevFt.equals(v);
+                        e.elevEdit = v.isEmpty() || same ? null : v;
+                    });
                 })
                 .show();
     }
 
-    private void confirmRemoveFreq(final Freq f, final int index) {
-        new AlertDialog.Builder(this)
-                .setMessage("Remove " + f.type + " " + f.mhzFormatted() + "?")
+    private void editNote(Station s, final Note old) {
+        LinearLayout box = form();
+        final EditText header = input(box, "Heading, e.g. Circuit", old == null ? "" : old.header,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        final EditText text = input(box, "Text", old == null ? "" : old.text,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                        | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        ScrollView wrap = new ScrollView(this);
+        wrap.addView(box);
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
+                .setTitle(old == null ? "Add field" : "Edit field")
+                .setView(wrap)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Remove", (d, w) -> {
-                    App.store(this).update(id, e -> {
-                        if (index < e.userFreqs.size() && e.userFreqs.get(index) == f) {
-                            e.userFreqs.remove(index);
+                .setPositiveButton("Save", (d, w) -> {
+                    final String h = value(header);
+                    final String t = value(text);
+                    if (h.isEmpty() && t.isEmpty()) {
+                        Toast.makeText(this, "Not saved: the field is empty.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    change(e -> {
+                        Note next = new Note(h, t);
+                        int at = old == null ? -1 : e.notes.indexOf(old);
+                        if (at >= 0) {
+                            e.notes.set(at, next);
+                        } else {
+                            e.notes.add(next);
                         }
                     });
-                    App.notifyChanged(this);
-                })
+                });
+        if (old != null) {
+            b.setNeutralButton("Remove", (d, w) -> change(e -> e.notes.remove(old)));
+        }
+        b.show();
+    }
+
+    private void confirmReset() {
+        new AlertDialog.Builder(this)
+                .setTitle("Reset to built-in data?")
+                .setMessage("Your changes to the frequencies, runways and elevation of " + id
+                        + " will be discarded. Fields you added yourself are kept.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Reset", (d, w) -> change(Station.Edit::resetToBuiltIn))
                 .show();
     }
+
+    // ------------------------------------------------------------ NOTAMs
 
     private void notams(Station s, long now, boolean busy) {
         String country = s.country();
@@ -430,10 +801,7 @@ public final class DetailActivity extends Activity {
             if ("US".equals(country)) {
                 note("US NOTAMs can't be shown in the app: the FAA does not offer an open NOTAM feed. "
                         + "Look up " + s.id + " on the FAA NOTAM Search site.");
-                TextView open = Ui.button(this, "Open FAA NOTAM Search", v -> openUrl(FAA_NOTAM_SEARCH));
-                LinearLayout.LayoutParams lp = Ui.wrap();
-                lp.topMargin = Ui.dp(this, 10);
-                content.addView(open, lp);
+                button("Open FAA NOTAM Search", v -> openUrl(FAA_NOTAM_SEARCH));
             } else {
                 note("NOTAMs are available in the app for Canadian aerodromes only.");
             }
@@ -458,7 +826,7 @@ public final class DetailActivity extends Activity {
             }
             return;
         }
-        small("NAV CANADA · AS OF " + Ui.dayHm(s.notamAt));
+        small("NAV CANADA · AS OF " + Ui.dayHm(s.notamAt) + (s.notams.isEmpty() ? "" : " · TAP A WORD TO DECODE IT"));
         if (s.notams.isEmpty()) {
             note("No NOTAMs returned for this aerodrome.");
             return;
@@ -478,7 +846,7 @@ public final class DetailActivity extends Activity {
                 content.addView(Ui.divider(this));
             }
             first = false;
-            raw(n.raw, 12, Ui.FG);
+            words(n.raw, 12, Ui.FG, Decode.NOTAM);
         }
     }
 
@@ -508,12 +876,14 @@ public final class DetailActivity extends Activity {
         List<Metar> latest = History.latest(s.metars, 5);
         if (latest.isEmpty()) {
             note(s.metarAt == 0 ? pending(busy) : "No METARs reported for this location.");
+        } else {
+            small("TAP A WORD TO DECODE IT");
         }
         for (int i = 0; i < latest.size(); i++) {
             if (i > 0) {
                 content.addView(Ui.divider(this));
             }
-            raw(latest.get(i).raw, 13, Ui.FG);
+            words(latest.get(i).raw, 13, Ui.FG, Decode.METAR);
         }
         Metar newest = s.latestMetar();
         if (newest != null && now - newest.obs > MainActivity.OLD_METAR) {
@@ -539,13 +909,13 @@ public final class DetailActivity extends Activity {
                 add(d);
                 lastDay = day;
             }
+            TextView t;
             if (slot.metar != null) {
-                TextView t = raw(slot.metar.raw, 12, Ui.FG);
-                t.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
+                t = words(slot.metar.raw, 12, Ui.FG, Decode.METAR);
             } else {
-                TextView t = raw(Ui.hhmm(slot.time) + "  no report", 12, Ui.DIM);
-                t.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
+                t = add(Ui.text(this, Ui.hhmm(slot.time) + "  no report", 12, Ui.DIM, true));
             }
+            t.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
         }
     }
 
@@ -566,8 +936,8 @@ public final class DetailActivity extends Activity {
             TextView w = warn("Expired " + Ui.dayHm(cur.validTo) + " and no newer TAF has been issued.");
             w.setPadding(0, 0, 0, Ui.dp(this, 6));
         }
-        small("ISSUED " + Ui.dayHm(cur.issued));
-        raw(TafFormat.lines(cur.raw), 13, Ui.FG);
+        small("ISSUED " + Ui.dayHm(cur.issued) + " · TAP A WORD TO DECODE IT");
+        words(TafFormat.lines(cur.raw), 13, Ui.FG, Decode.TAF);
 
         if (s.tafs.size() > 1) {
             add(Ui.heading(this, "Earlier"));
@@ -578,7 +948,7 @@ public final class DetailActivity extends Activity {
                 }
                 TextView label = small("ISSUED " + Ui.dayHm(t.issued));
                 label.setPadding(0, Ui.dp(this, i > 1 ? 10 : 0), 0, 0);
-                raw(TafFormat.lines(t.raw), 12, Ui.DIM);
+                words(TafFormat.lines(t.raw), 12, Ui.DIM, Decode.TAF);
             }
         }
     }

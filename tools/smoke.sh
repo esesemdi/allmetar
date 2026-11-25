@@ -22,6 +22,25 @@ tap() {
   cp ui.xml "$OUT/notfound-$N.xml"
   return 1
 }
+# press_in ATTR VALUE DX DY: tap at an offset from the top-left corner of a node (to hit one word of a report)
+press_in() {
+  dump
+  local b
+  if b=$(python3 tools/ui_find.py ui.xml "$1" "$2" TextView 0 bounds); then
+    set -- $b "$3" "$4"
+    adb shell input tap $(( $1 + $5 )) $(( $2 + $6 ))
+    echo "press at $(( $1 + $5 )) $(( $2 + $6 ))"
+    return 0
+  fi
+  echo "NOT FOUND for press: $1 $2" | tee -a "$OUT/problems.txt"
+  return 1
+}
+type_into() { # type_into INDEX TEXT: focus the INDEX-th text box on screen and type
+  tap class android.widget.EditText - "$1" || return 1
+  sleep 1
+  adb shell input text "$2"
+  sleep 1
+}
 add_station() {
   tap content-desc "Add location" || return 1
   sleep 3
@@ -46,19 +65,66 @@ add_station CKK7
 sleep 30
 shot list-three
 
-# --- Canadian aerodrome, all three tabs
+# --- Canadian aerodrome: view, edit, own fields, decode
 tap text CYWG TextView
 sleep 4
 tap text AERODROME
 sleep 2
 shot cywg-aerodrome
+tap text "EDIT AERODROME DATA"
+sleep 2
+shot edit-mode
+tap text ATIS TextView
+sleep 2
+shot edit-frequency-dialog
+tap text "~cancel"
+sleep 1
+tap text "+ ADD FREQUENCY"
+sleep 2
+type_into 0 "FBO"
+type_into 1 "122.95"
+shot add-frequency-dialog
+tap text "~save"
+sleep 2
 adb shell input swipe 540 1900 540 700 400; sleep 1
-shot cywg-aerodrome-2
+shot edit-mode-lower
+tap text "+ ADD FIELD"
+sleep 2
+type_into 0 "Circuit"
+type_into 1 "Left%shand,%s1000%sft%sAGL"
+shot add-field-dialog
+tap text "~save"
+sleep 2
+shot edit-mode-with-field
+adb shell input keyevent 4
+sleep 2
+tap text METAR; sleep 1; tap text AERODROME; sleep 2
+shot aerodrome-after-editing
 adb shell input swipe 540 1900 540 700 400; sleep 1
+shot aerodrome-after-editing-2
+adb shell input swipe 540 1900 540 900 400; sleep 1
 shot cywg-notams
+press_in text "~Q) CZ" 230 92
+sleep 2
+shot decode-notam-qualifier
+press_in text "~Q) CZ" 60 182
+sleep 2
+shot decode-notam-word
 tap text METAR
 sleep 2
 shot cywg-metar
+press_in text "~KT " 330 46
+sleep 2
+shot decode-metar-wind
+press_in text "~KT " 60 46
+sleep 2
+shot decode-metar-station
+press_in text "~KT " 480 46
+sleep 2
+shot decode-metar-third
+press_in text "~KT " 200 92
+sleep 2
+shot decode-metar-second-line
 adb shell input swipe 540 1900 540 600 400; sleep 1
 shot cywg-metar-history
 adb shell input swipe 540 1900 540 300 200; adb shell input swipe 540 1900 540 300 200; adb shell input swipe 540 1900 540 300 200; sleep 1
@@ -66,6 +132,14 @@ shot cywg-metar-history-end
 tap text TAF
 sleep 2
 shot cywg-taf
+press_in text "~TAF " 40 46
+sleep 2
+shot decode-taf-first
+press_in text "~TAF " 120 137
+sleep 2
+shot decode-taf-change-group
+tap text TAF
+sleep 1
 adb shell input keyevent 4
 sleep 2
 

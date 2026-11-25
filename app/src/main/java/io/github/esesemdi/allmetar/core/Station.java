@@ -17,7 +17,14 @@ public final class Station {
     /** Newest first. */
     public final List<Taf> tafs;
     public final List<Notam> notams;
-    public final List<Freq> userFreqs;
+    /** The user's own version of the frequency list; null while the built-in list is unchanged. */
+    public final List<Freq> freqsEdit;
+    /** The user's own version of the runway list; null while the built-in list is unchanged. */
+    public final List<Runway> runwaysEdit;
+    /** Elevation in feet as entered by the user; null while the built-in value is unchanged. */
+    public final String elevEdit;
+    /** Fields the user added (heading + text). */
+    public final List<Note> notes;
     /** Epoch seconds of the last successful fetch of each product; 0 = never. */
     public final long metarAt;
     public final long tafAt;
@@ -36,7 +43,11 @@ public final class Station {
         this.metars = Collections.unmodifiableList(new ArrayList<>(e.metars));
         this.tafs = Collections.unmodifiableList(new ArrayList<>(e.tafs));
         this.notams = Collections.unmodifiableList(new ArrayList<>(e.notams));
-        this.userFreqs = Collections.unmodifiableList(new ArrayList<>(e.userFreqs));
+        this.freqsEdit = e.freqsEdit == null ? null : Collections.unmodifiableList(new ArrayList<>(e.freqsEdit));
+        this.runwaysEdit = e.runwaysEdit == null ? null
+                : Collections.unmodifiableList(new ArrayList<>(e.runwaysEdit));
+        this.elevEdit = e.elevEdit;
+        this.notes = Collections.unmodifiableList(new ArrayList<>(e.notes));
         this.metarAt = e.metarAt;
         this.tafAt = e.tafAt;
         this.notamAt = e.notamAt;
@@ -61,7 +72,10 @@ public final class Station {
         e.metars = new ArrayList<>(metars);
         e.tafs = new ArrayList<>(tafs);
         e.notams = new ArrayList<>(notams);
-        e.userFreqs = new ArrayList<>(userFreqs);
+        e.freqsEdit = freqsEdit == null ? null : new ArrayList<>(freqsEdit);
+        e.runwaysEdit = runwaysEdit == null ? null : new ArrayList<>(runwaysEdit);
+        e.elevEdit = elevEdit;
+        e.notes = new ArrayList<>(notes);
         e.metarAt = metarAt;
         e.tafAt = tafAt;
         e.notamAt = notamAt;
@@ -78,7 +92,33 @@ public final class Station {
         public List<Metar> metars = new ArrayList<>();
         public List<Taf> tafs = new ArrayList<>();
         public List<Notam> notams = new ArrayList<>();
-        public List<Freq> userFreqs = new ArrayList<>();
+        public List<Freq> freqsEdit;
+        public List<Runway> runwaysEdit;
+        public String elevEdit;
+        public List<Note> notes = new ArrayList<>();
+
+        /** The frequency list ready to be changed: the user's version, started from the built-in one. */
+        public List<Freq> editableFreqs() {
+            if (freqsEdit == null) {
+                freqsEdit = airport == null ? new ArrayList<Freq>() : new ArrayList<>(airport.freqs);
+            }
+            return freqsEdit;
+        }
+
+        /** The runway list ready to be changed: the user's version, started from the built-in one. */
+        public List<Runway> editableRunways() {
+            if (runwaysEdit == null) {
+                runwaysEdit = airport == null ? new ArrayList<Runway>() : new ArrayList<>(airport.runways);
+            }
+            return runwaysEdit;
+        }
+
+        /** Drops the user's changes to frequencies, runways and elevation. Added fields are kept. */
+        public void resetToBuiltIn() {
+            freqsEdit = null;
+            runwaysEdit = null;
+            elevEdit = null;
+        }
         public long metarAt;
         public long tafAt;
         public long notamAt;
@@ -89,6 +129,35 @@ public final class Station {
         public Station build() {
             return new Station(this);
         }
+    }
+
+    /** Frequencies to show: the user's version if they changed the list, otherwise the built-in one. */
+    public List<Freq> freqs() {
+        if (freqsEdit != null) {
+            return freqsEdit;
+        }
+        return airport == null ? Collections.<Freq>emptyList() : airport.freqs;
+    }
+
+    /** Runways to show: the user's version if they changed the list, otherwise the built-in one. */
+    public List<Runway> runways() {
+        if (runwaysEdit != null) {
+            return runwaysEdit;
+        }
+        return airport == null ? Collections.<Runway>emptyList() : airport.runways;
+    }
+
+    /** Elevation in feet as text; empty when unknown. */
+    public String elevFt() {
+        if (elevEdit != null) {
+            return elevEdit;
+        }
+        return airport == null ? "" : airport.elevFt;
+    }
+
+    /** True when the user changed frequencies, runways or elevation. */
+    public boolean hasEdits() {
+        return freqsEdit != null || runwaysEdit != null || elevEdit != null;
     }
 
     /** Most recent observation, or null. */
@@ -150,11 +219,28 @@ public final class Station {
             a.add(x.toJson());
         }
         m.put("notams", a);
+        if (freqsEdit != null) {
+            a = new ArrayList<>();
+            for (Freq x : freqsEdit) {
+                a.add(x.toJson());
+            }
+            m.put("freqsEdit", a);
+        }
+        if (runwaysEdit != null) {
+            a = new ArrayList<>();
+            for (Runway x : runwaysEdit) {
+                a.add(x.toJson());
+            }
+            m.put("runwaysEdit", a);
+        }
+        if (elevEdit != null) {
+            m.put("elevEdit", elevEdit);
+        }
         a = new ArrayList<>();
-        for (Freq x : userFreqs) {
+        for (Note x : notes) {
             a.add(x.toJson());
         }
-        m.put("userFreqs", a);
+        m.put("notes", a);
         m.put("metarAt", metarAt);
         m.put("tafAt", tafAt);
         m.put("notamAt", notamAt);
@@ -184,8 +270,26 @@ public final class Station {
         for (Object o : Json.arr(m.get("notams"))) {
             e.notams.add(Notam.fromJson(Json.obj(o)));
         }
+        if (m.get("freqsEdit") instanceof List) {
+            e.freqsEdit = new ArrayList<>();
+            for (Object o : Json.arr(m.get("freqsEdit"))) {
+                e.freqsEdit.add(Freq.fromJson(Json.obj(o)));
+            }
+        }
+        if (m.get("runwaysEdit") instanceof List) {
+            e.runwaysEdit = new ArrayList<>();
+            for (Object o : Json.arr(m.get("runwaysEdit"))) {
+                e.runwaysEdit.add(Runway.fromJson(Json.obj(o)));
+            }
+        }
+        e.elevEdit = Json.str(m, "elevEdit", null);
+        for (Object o : Json.arr(m.get("notes"))) {
+            e.notes.add(Note.fromJson(Json.obj(o)));
+        }
+        // Version 1.0.4 and earlier kept frequencies added by the user in a separate list.
         for (Object o : Json.arr(m.get("userFreqs"))) {
-            e.userFreqs.add(Freq.fromJson(Json.obj(o)));
+            Freq f = Freq.fromJson(Json.obj(o));
+            e.editableFreqs().add(new Freq(f.type, f.desc, f.mhz, true));
         }
         e.metarAt = Json.lng(m, "metarAt", 0);
         e.tafAt = Json.lng(m, "tafAt", 0);

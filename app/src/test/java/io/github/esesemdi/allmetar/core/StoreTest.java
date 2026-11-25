@@ -61,7 +61,10 @@ public class StoreTest {
                 e.metars.add(new Metar(1795611060L, "SPECI CYWG 251251Z", true));
                 e.tafs.add(new Taf(1795612320L, 1795611600L, 1795694400L, "TAF AMD CYWG"));
                 e.notams.add(new Notam("1", "(S0234/26\nA) CYWG)", true));
-                e.userFreqs.add(new Freq("ATF", "mine", "123.2"));
+                e.editableFreqs().add(new Freq("ATF", "", "123.2", true));
+                e.editableRunways().set(0, new Runway("18", "36", "10990", "200", "ASP", true, false, true));
+                e.elevEdit = "785";
+                e.notes.add(new Note("Circuit", "Left hand\n1000 ft AGL"));
                 e.histTo = 1795615300L;
                 e.metarAt = 1795615301L;
                 e.notamError = "Server timed out";
@@ -81,7 +84,18 @@ public class StoreTest {
         assertEquals(1795612320L, s.tafs.get(0).issued);
         assertEquals("(S0234/26\nA) CYWG)", s.notams.get(0).raw);
         assertTrue(s.notams.get(0).aerodrome);
-        assertEquals("123.2", s.userFreqs.get(0).mhz);
+        assertEquals(2, s.freqs().size());
+        assertEquals("118.3", s.freqs().get(0).mhz);
+        assertFalse(s.freqs().get(0).mine);
+        assertEquals("123.2", s.freqs().get(1).mhz);
+        assertTrue(s.freqs().get(1).mine);
+        assertEquals("10990", s.runways().get(0).lengthFt);
+        assertTrue(s.runways().get(0).mine);
+        assertEquals("785", s.elevFt());
+        assertTrue(s.hasEdits());
+        assertEquals("Circuit", s.notes.get(0).header);
+        assertEquals("Left hand\n1000 ft AGL", s.notes.get(0).text);
+        assertEquals("built-in data is untouched", "11000", s.airport.runways.get(0).lengthFt);
         assertEquals(1795615300L, s.histTo);
         assertEquals("Server timed out", s.notamError);
         assertNull(s.wxError);
@@ -93,6 +107,77 @@ public class StoreTest {
         assertEquals(1795615302L, b.lastRefresh());
         assertEquals("KGFK", b.widgetStation(42));
         assertNull(b.widgetStation(7));
+    }
+
+    @Test
+    public void editsCanBeResetAndBuiltInDataShowsUntilEdited() throws Exception {
+        Store s = new Store(tempDir());
+        Airport ap = new Airport("CYWG", "Winnipeg Intl", "Winnipeg", "MB", "CA", "783", "49.9100", "-97.2399",
+                "L", "YWG", Arrays.asList(new Runway("18", "36", "11000", "200", "ASP", true, false)),
+                Arrays.asList(new Freq("TWR", "TWR", "118.3")));
+        s.add(Station.create("CYWG", "Winnipeg Intl", ap));
+        Station st = s.get("CYWG");
+        assertFalse(st.hasEdits());
+        assertEquals("783", st.elevFt());
+        assertEquals(1, st.freqs().size());
+
+        st = s.update("CYWG", new Store.Change() {
+            @Override
+            public void apply(Station.Edit e) {
+                e.editableFreqs().remove(0);
+                e.notes.add(new Note("Fuel", "100LL"));
+            }
+        });
+        assertTrue(st.hasEdits());
+        assertEquals("the user removed the only frequency", 0, st.freqs().size());
+
+        st = s.update("CYWG", new Store.Change() {
+            @Override
+            public void apply(Station.Edit e) {
+                e.resetToBuiltIn();
+            }
+        });
+        assertFalse(st.hasEdits());
+        assertEquals(1, st.freqs().size());
+        assertEquals("added fields survive a reset", 1, st.notes.size());
+
+        Station bare = Station.create("EGLL", "", null);
+        assertEquals(0, bare.freqs().size());
+        assertEquals(0, bare.runways().size());
+        assertEquals("", bare.elevFt());
+    }
+
+    @Test
+    public void frequenciesAddedInTheFirstVersionAreKept() throws Exception {
+        File dir = tempDir();
+        Files.write(new File(dir, "index.json").toPath(),
+                "{\"order\":[\"CKK7\",\"CYWG\"],\"widgets\":{},\"lastRefresh\":0}".getBytes("UTF-8"));
+        // as written by version 1.0.4: user frequencies in "userFreqs"
+        Files.write(new File(dir, "st_CKK7.json").toPath(), ("{\"id\":\"CKK7\",\"name\":\"Steinbach (South)\","
+                + "\"metars\":[],\"tafs\":[],\"notams\":[],"
+                + "\"userFreqs\":[{\"t\":\"ATF\",\"d\":\"\",\"f\":\"123.2\"}]}").getBytes("UTF-8"));
+        Files.write(new File(dir, "st_CYWG.json").toPath(), ("{\"id\":\"CYWG\",\"name\":\"Winnipeg\","
+                + "\"airport\":{\"id\":\"CYWG\",\"name\":\"Winnipeg\",\"freqs\":[{\"t\":\"TWR\",\"d\":\"TWR\",\"f\":\"118.3\"}],"
+                + "\"runways\":[]},\"userFreqs\":[{\"t\":\"FBO\",\"d\":\"\",\"f\":\"122.95\"}]}").getBytes("UTF-8"));
+        Store s = new Store(dir);
+        Station ckk7 = s.get("CKK7");
+        assertEquals(1, ckk7.freqs().size());
+        assertEquals("ATF", ckk7.freqs().get(0).type);
+        assertTrue(ckk7.freqs().get(0).mine);
+        Station wg = s.get("CYWG");
+        assertEquals(2, wg.freqs().size());
+        assertEquals("TWR", wg.freqs().get(0).type);
+        assertFalse(wg.freqs().get(0).mine);
+        assertEquals("FBO", wg.freqs().get(1).type);
+        assertTrue(wg.freqs().get(1).mine);
+        // and they stay after the file is rewritten in the new format
+        s.update("CYWG", new Store.Change() {
+            @Override
+            public void apply(Station.Edit e) {
+                e.metarAt = 5;
+            }
+        });
+        assertEquals(2, new Store(dir).get("CYWG").freqs().size());
     }
 
     @Test
