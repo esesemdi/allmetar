@@ -1,0 +1,15 @@
+HTTP/2 200 
+date: Wed, 25 Nov 2026 15:23:40 GMT
+content-type: application/json; charset=utf-8
+content-length: 5039
+vary: Accept-Encoding
+cache-control: max-age=60
+etag: W/"13af-HKn1ExiX5hkzYVV8mLc3djkYKNg"
+x-frame-options: SAMEORIGIN
+content-security-policy: frame-ancestors 'self' *.weather.gov
+strict-transport-security: max-age=63072000; includeSubDomains
+x-azure-ref: 20261125T152340Z-r1c987b9fdfjzgn8hC1BL12f640000000vt0000000008wty
+x-fd-int-roxy-purgeid: 66959021
+x-cache: TCP_MISS
+accept-ranges: bytes
+

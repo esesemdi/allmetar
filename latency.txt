@@ -1,0 +1,17 @@
+awc-ca.json entries 249
+CYBR n=30  receipt-obs min: min 8.1 med 8.3 p90 8.8 max 14.6 | receipt minutes past the hour: med 8.3 p90 8.8 max 14.6 | >10min past: 1  >15: 0  >20: 0
+CYQR n=30  receipt-obs min: min 8.1 med 8.3 p90 8.7 max 8.7 | receipt minutes past the hour: med 8.3 p90 8.7 max 8.7 | >10min past: 0  >15: 0  >20: 0
+CYVR n=30  receipt-obs min: min 8.1 med 8.2 p90 8.3 max 14.1 | receipt minutes past the hour: med 8.2 p90 8.3 max 14.1 | >10min past: 1  >15: 0  >20: 0
+CYWG n=30  receipt-obs min: min 8.1 med 8.2 p90 8.3 max 18.1 | receipt minutes past the hour: med 8.2 p90 8.3 max 18.1 | >10min past: 1  >15: 1  >20: 0
+CYXE n=30  receipt-obs min: min 8.1 med 8.3 p90 8.6 max 8.8 | receipt minutes past the hour: med 8.3 p90 8.6 max 8.8 | >10min past: 0  >15: 0  >20: 0
+CYYZ n=30  receipt-obs min: min 8.1 med 8.2 p90 8.2 max 8.3 | receipt minutes past the hour: med 8.2 p90 8.2 max 8.3 | >10min past: 0  >15: 0  >20: 0
+awc-us.json entries 179
+KBIS n=30  receipt-obs min: min 4.1 med 4.5 p90 4.9 max 5.5 | receipt minutes past the hour: med -3.5 p90 -3.1 max -2.5 | >10min past: 0  >15: 0  >20: 0
+KFAR n=30  receipt-obs min: min 3.4 med 3.5 p90 3.8 max 4.6 | receipt minutes past the hour: med -3.5 p90 -3.2 max -2.4 | >10min past: 0  >15: 0  >20: 0
+KGFK n=30  receipt-obs min: min 3.3 med 3.5 p90 3.8 max 4.5 | receipt minutes past the hour: med -3.5 p90 -3.2 max -2.5 | >10min past: 0  >15: 0  >20: 0
+KMSP n=30  receipt-obs min: min 3.4 med 3.5 p90 3.9 max 4.6 | receipt minutes past the hour: med -3.5 p90 -3.1 max -2.4 | >10min past: 0  >15: 0  >20: 0
+KORD n=30  receipt-obs min: min 3.1 med 3.1 p90 5.5 max 39.1 | receipt minutes past the hour: med -5.9 p90 -3.5 max 30.1 | >10min past: 2  >15: 2  >20: 2
+week entries 243 oldest 2026-11-18 15:27:00 newest 2026-11-25 15:00:00
+cfps meta {"now": "2026-11-25T15:23:43.967", "count": {"metar": 1, "taf": 1}, "messages": []}
+cfps metar CYWG 2026-11-25T15:00:00 None 'METAR CYWG 251500Z 19013KT 1/2SM R36/P6000FT/D R13/P6000FT/N FZFG VV001 M03/M04 A3042 RMK FG8 SLP319='
+cfps taf CYWG 2026-11-25T15:00:00 2026-11-26T12:00:00 'TAF AMD CYWG 251515Z 2515/2612 19012KT 1/2SM FZFG VV001 TEMPO\n     2515/2517 3SM BR OVC003\n    FM251700 19015KT P6SM SCT008 TEMPO 2517/2521 5SM BR BKN005\n    FM252200 19020G30KT P6SM SCT012\n    FM260500 18015G25KT P6SM FEW012

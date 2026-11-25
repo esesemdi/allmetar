@@ -1,0 +1,10 @@
+HTTP/2 204 
+date: Wed, 25 Nov 2026 15:23:41 GMT
+cache-control: max-age=60
+x-frame-options: SAMEORIGIN
+content-security-policy: frame-ancestors 'self' *.weather.gov
+strict-transport-security: max-age=63072000; includeSubDomains
+x-azure-ref: 20261125T152341Z-15dd4c765f7kw8vmhC1IAD7s7400000013p00000000013y1
+x-fd-int-roxy-purgeid: 66959021
+x-cache: TCP_MISS
+

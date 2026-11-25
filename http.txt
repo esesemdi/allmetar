@@ -1,0 +1,8 @@
+awc-ca 200
+awc-us 200
+latest 200
+empty 204 size 0
+taf-empty 200 size 2
+week 200
+cfps-wx 200
+cfps-ckk7 200
