@@ -98,8 +98,7 @@ public final class MainActivity extends Activity {
         if (!byUser && (Sync.isBusy() || App.now() - store.lastRefresh() < STALE_AFTER)) {
             return;
         }
-        final android.content.Context app = getApplicationContext();
-        App.run(() -> App.sync(app).refreshAll());
+        App.refreshAll(this);
     }
 
     private void render() {

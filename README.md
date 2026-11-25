@@ -25,8 +25,10 @@ Long-press the widget to change its location later.
 | Aerodrome | Frequencies, runways, elevation | OurAirports (bundled, community data) |
 | Aerodrome | NOTAMs (Canadian aerodromes) | NAV CANADA CFPS |
 
-The app updates in the background a few minutes past every hour, and whenever it is opened with
-data older than ten minutes. All times are UTC.
+The app updates in the background at about ten past every hour (when that hour's reports have
+reached the feed), checks again a few times if a report is late, and catches up as soon as the
+connection returns after being offline. It also updates whenever it is opened with data older than
+ten minutes. All times are UTC.
 
 US NOTAMs are not shown: the FAA does not offer an open NOTAM feed. The app links to the FAA
 NOTAM Search site instead.

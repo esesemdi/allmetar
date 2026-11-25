@@ -108,8 +108,12 @@ sleep 5
 tap text REFRESH
 sleep 12
 shot offline
+adb shell dumpsys jobscheduler | grep "JobStatus{.*$PKG" > "$OUT/jobs-while-offline.txt" 2>&1
 adb shell svc wifi enable; adb shell svc data enable
-sleep 12
+# no tap here: the app should update by itself once the connection is back
+sleep 100
+shot online-again-automatic
+adb shell dumpsys jobscheduler | grep "JobStatus{.*$PKG" > "$OUT/jobs-back-online.txt" 2>&1
 tap text REFRESH
 sleep 15
 shot online-again

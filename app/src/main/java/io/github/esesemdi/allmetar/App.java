@@ -62,6 +62,37 @@ public final class App {
         });
     }
 
+    /** Updates everything in the background; if that fails, tries again once the connection is back. */
+    public static void refreshAll(Context c) {
+        final Context app = c.getApplicationContext();
+        run(() -> {
+            long started = now();
+            sync(app).refreshAll();
+            retryWhenOnlineIfFailed(app, started);
+        });
+    }
+
+    /** Same as {@link #refreshAll(Context)} for a single location. */
+    public static void refreshStation(Context c, final String id) {
+        final Context app = c.getApplicationContext();
+        run(() -> {
+            long started = now();
+            sync(app).refreshStation(id);
+            retryWhenOnlineIfFailed(app, started);
+        });
+    }
+
+    private static void retryWhenOnlineIfFailed(Context app, long started) {
+        Store s = store(app);
+        if (!s.ids().isEmpty() && s.lastRefresh() < started) {
+            try {
+                Scheduler.whenOnline(app);
+            } catch (RuntimeException ignored) {
+                // the hourly update will catch up
+            }
+        }
+    }
+
     public static void ui(Runnable r) {
         MAIN.post(r);
     }

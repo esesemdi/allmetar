@@ -190,7 +190,7 @@ public final class AddActivity extends Activity {
             final boolean added = store.add(Station.create(id, shown, airport));
             if (added) {
                 App.notifyChanged(app);
-                App.run(() -> App.sync(app).refreshStation(id));
+                App.refreshStation(app, id);
             }
             App.ui(() -> {
                 adding = false;

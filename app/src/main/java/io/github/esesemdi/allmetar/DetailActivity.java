@@ -159,9 +159,7 @@ public final class DetailActivity extends Activity {
     }
 
     private void refresh() {
-        final Context app = getApplicationContext();
-        final String station = id;
-        App.run(() -> App.sync(app).refreshStation(station));
+        App.refreshStation(this, id);
     }
 
     private void selectTab(int index) {
