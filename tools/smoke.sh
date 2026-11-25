@@ -8,7 +8,24 @@ mkdir -p "$OUT"
 N=0
 
 shot() { N=$((N + 1)); adb exec-out screencap -p > "$OUT/$(printf '%02d' $N)-$1.png"; echo "shot $N $1"; }
-dump() { adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb exec-out cat /sdcard/ui.xml > ui.xml; }
+dump() {
+  local try
+  for try in 1 2 3 4; do
+    adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
+    adb exec-out cat /sdcard/ui.xml > ui.xml
+    # a slow emulator sometimes shows "<some system app> isn't responding" on top of everything
+    if grep -q "isn&apos;t responding\|isn't responding" ui.xml; then
+      local xy
+      if xy=$(python3 tools/ui_find.py ui.xml text Wait); then
+        echo "dismissing a system not-responding dialog"
+        adb shell input tap $xy
+        sleep 3
+        continue
+      fi
+    fi
+    return 0
+  done
+}
 # tap ATTR VALUE [CLASS] [INDEX]
 tap() {
   dump
@@ -53,8 +70,10 @@ add_station() {
 
 adb install -r allmetar.apk || exit 1
 adb logcat -c
+sleep 20   # let the freshly booted system settle
 adb shell am start -W -n $PKG/.MainActivity
 sleep 4
+dump
 shot empty
 
 add_station CYWG
