@@ -68,16 +68,46 @@ jobs:
             --title "AllMetar $TAG" \
             --notes "Download **allmetar.apk** on your Android phone and open it to install. Signed with: $SIGNING."
 
-      - name: Keep the build log
+  # On-device check. Runs only for commits whose message contains [smoke].
+  smoke:
+    needs: build
+    if: contains(github.event.head_commit.message, '[smoke]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Download the APK that was just built
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "v1.0.${{ github.run_number }}" -p allmetar.apk
+
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: bash tools/smoke.sh
+
+      - name: Keep screenshots
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p "$RUNNER_TEMP/cilog" && cd "$RUNNER_TEMP/cilog"
-          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then tail -c 300000 "$GITHUB_WORKSPACE/build.log" > build.log; else echo "no build log" > build.log; fi
-          echo "run $GITHUB_RUN_NUMBER  sha $GITHUB_SHA  status ${{ job.status }}  signing: $SIGNING" > status.txt
+          mkdir -p shots && cd shots
+          echo "run $GITHUB_RUN_NUMBER sha $GITHUB_SHA" > run.txt
           git init -q
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A && git commit -qm "Build log for run $GITHUB_RUN_NUMBER"
-          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-log
+          git add -A && git commit -qm "Smoke test output for run $GITHUB_RUN_NUMBER"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-shots
