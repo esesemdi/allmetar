@@ -25,10 +25,15 @@ Long-press the widget to change its location later.
 | Aerodrome | Frequencies, runways, elevation | OurAirports (bundled, community data) |
 | Aerodrome | NOTAMs (Canadian aerodromes) | NAV CANADA CFPS |
 
-In every report the ceiling and the visibility are marked. A METAR is shown in light red when it is
-a SPECI or the conditions are LIFR (ceiling below 500 ft and/or visibility below 1 statute mile); in a
-TAF the groups forecasting LIFR are red. The TAF tab starts with a graph of the past seven days of
-ceiling and temperature (from the METARs) continuing into the ceiling the current TAF forecasts.
+In every report the ceiling and the visibility are shown black on white. A METAR whose conditions
+are LIFR (ceiling below 500 ft and/or visibility below 1 statute mile) is shown in light red instead,
+without those marks; in a TAF the same applies to each group. The TAF tab starts with a graph of the
+past seven days of ceiling and temperature (from the METARs) continuing into the ceiling the current
+TAF forecasts.
+
+**Weather watch** (WATCH on the main screen): set targets for ceiling, visibility, temperature, wind
+and gust, each "at or below" or "at or above" a value. While the watch is on, a METAR or TAF group
+that meets any one target is shown in yellow. LIFR stays red.
 
 Press any word of a METAR, TAF or NOTAM on a location's screen to see what it means; press and hold
 to copy the whole report. On the Aerodrome tab, **Edit aerodrome data** lets you change or add

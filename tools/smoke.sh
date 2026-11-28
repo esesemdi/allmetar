@@ -84,6 +84,25 @@ add_station CKK7
 sleep 30
 shot list-three
 
+# --- weather watch: on, visibility at or above 1 SM (nearly every report meets it; LIFR stays red)
+tap text WATCH
+sleep 2
+shot watch-off
+tap text "WATCH IS OFF"
+sleep 1
+tap text VISIBILITY
+sleep 2
+tap text "At or above"
+sleep 1
+type_into 0 "1"
+shot watch-target-dialog
+tap text "~save"
+sleep 2
+shot watch-on
+adb shell input keyevent 4
+sleep 2
+shot list-with-watch
+
 # --- Canadian aerodrome: view, edit, own fields, decode
 tap text CYWG TextView
 sleep 4

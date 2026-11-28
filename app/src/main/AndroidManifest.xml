@@ -33,6 +33,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".WatchActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".WidgetConfigActivity"
             android:exported="true">
             <intent-filter>

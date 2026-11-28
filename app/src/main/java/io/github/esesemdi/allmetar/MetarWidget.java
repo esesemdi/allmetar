@@ -77,7 +77,7 @@ public final class MetarWidget extends AppWidgetProvider {
             Metar m = s.latestMetar();
             if (m != null) {
                 text = ReportStyle.metar(m.raw);
-                color = ReportStyle.color(m, color);
+                color = ReportStyle.color(m, color, store.watch());
             } else if (s.metarAt == 0) {
                 text = s.id + "  loading…";
             } else {

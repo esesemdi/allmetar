@@ -52,6 +52,7 @@ import io.github.esesemdi.allmetar.core.Store;
 import io.github.esesemdi.allmetar.core.Sync;
 import io.github.esesemdi.allmetar.core.Taf;
 import io.github.esesemdi.allmetar.core.TafFormat;
+import io.github.esesemdi.allmetar.core.Watch;
 
 /** One location: aerodrome information, METARs and TAFs. */
 public final class DetailActivity extends Activity {
@@ -62,6 +63,8 @@ public final class DetailActivity extends Activity {
     private static final String KEY_TAB = "tab";
     private static final String KEY_EDITING = "editing";
     private static final String[] TABS = {"AERODROME", "METAR", "TAF"};
+    /** Background of the word whose explanation is showing (ceiling and visibility are white already). */
+    private static final int PRESSED = 0xFF9E9E9E;
 
     private String id;
     private int tab;
@@ -323,7 +326,7 @@ public final class DetailActivity extends Activity {
         if (kind == Decode.METAR) {
             ReportStyle.markMetar(span, text);
         } else if (kind == Decode.TAF && taf != null) {
-            ReportStyle.markTaf(span, text, taf.validFrom, taf.validTo);
+            ReportStyle.markTaf(span, text, taf.validFrom, taf.validTo, App.store(this).watch());
         }
         t.setText(span, TextView.BufferType.SPANNABLE);
         t.setMovementMethod(LinkMovementMethod.getInstance());
@@ -381,7 +384,7 @@ public final class DetailActivity extends Activity {
         }
 
         final Spannable text = (Spannable) view.getText();
-        final BackgroundColorSpan back = new BackgroundColorSpan(Ui.FG);
+        final BackgroundColorSpan back = new BackgroundColorSpan(PRESSED);
         final ForegroundColorSpan fore = new ForegroundColorSpan(Ui.BG);
         text.setSpan(back, ranges[from][0], ranges[to][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         text.setSpan(fore, ranges[from][0], ranges[to][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -882,19 +885,20 @@ public final class DetailActivity extends Activity {
             warn("Weather update failed: " + s.wxError
                     + (s.metarAt > 0 ? ". Showing data as of " + Ui.dayHm(s.metarAt) + "." : "."));
         }
+        final Watch watch = App.store(this).watch();
         add(Ui.heading(this, "Latest"));
         List<Metar> latest = History.latest(s.metars, 5);
         if (latest.isEmpty()) {
             note(s.metarAt == 0 ? pending(busy) : "No METARs reported for this location.");
         } else {
-            small("TAP A WORD TO DECODE IT · RED = SPECI OR LIFR");
+            small("TAP A WORD TO DECODE IT · RED = LIFR" + (watch.active() ? " · YELLOW = WATCH" : ""));
         }
         for (int i = 0; i < latest.size(); i++) {
             if (i > 0) {
                 content.addView(Ui.divider(this));
             }
             Metar m = latest.get(i);
-            words(m.raw, 13, ReportStyle.color(m, Ui.FG), Decode.METAR, null);
+            words(m.raw, 13, ReportStyle.color(m, Ui.FG, watch), Decode.METAR, null);
         }
         Metar newest = s.latestMetar();
         if (newest != null && now - newest.obs > MainActivity.OLD_METAR) {
@@ -922,7 +926,7 @@ public final class DetailActivity extends Activity {
             }
             TextView t;
             if (slot.metar != null) {
-                t = words(slot.metar.raw, 12, ReportStyle.color(slot.metar, Ui.FG), Decode.METAR, null);
+                t = words(slot.metar.raw, 12, ReportStyle.color(slot.metar, Ui.FG, watch), Decode.METAR, null);
             } else {
                 t = add(Ui.text(this, Ui.hhmm(slot.time) + "  no report", 12, Ui.DIM, true));
             }
@@ -956,7 +960,8 @@ public final class DetailActivity extends Activity {
             TextView w = warn("Expired " + Ui.dayHm(cur.validTo) + " and no newer TAF has been issued.");
             w.setPadding(0, 0, 0, Ui.dp(this, 6));
         }
-        small("ISSUED " + Ui.dayHm(cur.issued) + " · TAP A WORD TO DECODE IT · RED = LIFR");
+        small("ISSUED " + Ui.dayHm(cur.issued) + " · TAP A WORD TO DECODE IT · RED = LIFR"
+                + (App.store(this).watch().active() ? " · YELLOW = WATCH" : ""));
         words(TafFormat.lines(cur.raw), 13, Ui.FG, Decode.TAF, cur);
 
         if (s.tafs.size() > 1) {

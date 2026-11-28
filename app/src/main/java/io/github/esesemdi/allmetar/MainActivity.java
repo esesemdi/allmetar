@@ -17,6 +17,7 @@ import io.github.esesemdi.allmetar.core.Metar;
 import io.github.esesemdi.allmetar.core.Station;
 import io.github.esesemdi.allmetar.core.Store;
 import io.github.esesemdi.allmetar.core.Sync;
+import io.github.esesemdi.allmetar.core.Watch;
 
 /** The list of saved locations, each with its current METAR. */
 public final class MainActivity extends Activity {
@@ -27,6 +28,7 @@ public final class MainActivity extends Activity {
 
     private LinearLayout list;
     private TextView status;
+    private TextView watchButton;
     private final Runnable onChange = this::render;
 
     @Override
@@ -41,7 +43,10 @@ public final class MainActivity extends Activity {
         bar.setPadding(Ui.dp(this, 16), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
         TextView title = Ui.text(this, "ALLMETAR", 15, Ui.FG, false);
         title.setLetterSpacing(0.3f);
+        Ui.oneLine(title);
         bar.addView(title, Ui.weighted());
+        watchButton = Ui.action(this, "WATCH", v -> startActivity(new Intent(this, WatchActivity.class)));
+        bar.addView(watchButton);
         bar.addView(Ui.action(this, "REFRESH", v -> refresh(true)));
         TextView addButton = Ui.action(this, "+", v -> add());
         addButton.setTextSize(24);
@@ -104,6 +109,8 @@ public final class MainActivity extends Activity {
     private void render() {
         Store store = App.store(this);
         List<Station> stations = store.stations();
+        Watch watch = store.watch();
+        watchButton.setTextColor(watch.active() ? ReportStyle.YELLOW : Ui.DIM);
         long now = App.now();
         list.removeAllViews();
 
@@ -139,7 +146,7 @@ public final class MainActivity extends Activity {
             int color = Ui.FG;
             if (m != null) {
                 body = ReportStyle.metar(m.raw);
-                color = ReportStyle.color(m, Ui.FG);
+                color = ReportStyle.color(m, Ui.FG, watch);
             } else if (s.metarAt == 0) {
                 body = s.wxError != null ? "Not loaded yet" : "Loading…";
                 color = Ui.DIM;

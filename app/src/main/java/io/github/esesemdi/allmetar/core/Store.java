@@ -29,6 +29,7 @@ public final class Store {
     private final List<String> order = new ArrayList<>();
     private final Map<String, String> widgets = new LinkedHashMap<>();
     private long lastRefresh;
+    private Watch watch = Watch.none();
 
     public Store(File dir) {
         this.dir = dir;
@@ -153,6 +154,22 @@ public final class Store {
         }
     }
 
+    /** The user's weather watch targets. */
+    public Watch watch() {
+        synchronized (lock) {
+            load();
+            return watch;
+        }
+    }
+
+    public void setWatch(Watch w) {
+        synchronized (lock) {
+            load();
+            watch = w == null ? Watch.none() : w;
+            writeIndex();
+        }
+    }
+
     /** Location shown by a home-screen widget, or null. */
     public String widgetStation(int widgetId) {
         synchronized (lock) {
@@ -218,6 +235,9 @@ public final class Store {
                 }
             }
             lastRefresh = Json.lng(m, "lastRefresh", 0);
+            if (m.get("watch") instanceof Map) {
+                watch = Watch.fromJson(Json.obj(m.get("watch")));
+            }
         } catch (RuntimeException e) {
             // Unreadable index: start with an empty list rather than crash.
         }
@@ -248,6 +268,7 @@ public final class Store {
         m.put("order", new ArrayList<Object>(order));
         m.put("widgets", new LinkedHashMap<String, Object>(widgets));
         m.put("lastRefresh", lastRefresh);
+        m.put("watch", watch.toJson());
         write(new File(dir, "index.json"), Json.write(m));
     }
 

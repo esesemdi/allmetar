@@ -20,16 +20,23 @@ public final class Conditions {
     /** Statute miles; NaN when the words say nothing about visibility. */
     public final double visibilitySm;
     public final int tempC;
+    /** Sustained wind speed in knots, or -1 when no wind group was found. */
+    public final int windKt;
+    /** Gust speed in knots, or -1 when no gust was reported. */
+    public final int gustKt;
     /** Index of the word that is the ceiling, or -1. */
     public final int ceilingWord;
     /** First and last index of the visibility word(s), or -1. */
     public final int visFrom;
     public final int visTo;
 
-    private Conditions(int ceilingFt, double visibilitySm, int tempC, int ceilingWord, int visFrom, int visTo) {
+    private Conditions(int ceilingFt, double visibilitySm, int tempC, int windKt, int gustKt, int ceilingWord,
+                       int visFrom, int visTo) {
         this.ceilingFt = ceilingFt;
         this.visibilitySm = visibilitySm;
         this.tempC = tempC;
+        this.windKt = windKt;
+        this.gustKt = gustKt;
         this.ceilingWord = ceilingWord;
         this.visFrom = visFrom;
         this.visTo = visTo;
@@ -77,7 +84,7 @@ public final class Conditions {
     private static final Pattern FRACTION_SM = Pattern.compile("([PM])?(\\d)/(\\d{1,2})SM");
     private static final Pattern WHOLE = Pattern.compile("\\d{1,2}");
     private static final Pattern TEMP = Pattern.compile("(M)?(\\d{2})/(?:(M)?(\\d{2}))?");
-    private static final Pattern WIND = Pattern.compile("(\\d{3}|VRB)\\d{2,3}(G\\d{2,3})?(KT|MPS|KMH)");
+    private static final Pattern WIND = Pattern.compile("(\\d{3}|VRB)(\\d{2,3})(?:G(\\d{2,3}))?(KT|MPS|KMH)");
 
     /** Reads words[from] up to (not including) words[to]. */
     public static Conditions of(String[] words, int from, int to) {
@@ -87,9 +94,22 @@ public final class Conditions {
         int visFrom = -1;
         int visTo = -1;
         int temp = NO_TEMP;
+        int wind = -1;
+        int gust = -1;
         for (int i = Math.max(0, from); i < to && i < words.length; i++) {
             String t = clean(words[i]);
-            Matcher m = LAYER.matcher(t);
+            Matcher m = WIND.matcher(t);
+            if (m.matches()) {
+                if (wind < 0) {
+                    double factor = m.group(4).equals("KT") ? 1 : m.group(4).equals("MPS") ? 1.943844 : 0.539957;
+                    wind = (int) Math.round(Integer.parseInt(m.group(2)) * factor);
+                    if (m.group(3) != null) {
+                        gust = (int) Math.round(Integer.parseInt(m.group(3)) * factor);
+                    }
+                }
+                continue;
+            }
+            m = LAYER.matcher(t);
             if (m.matches()) {
                 int height = Integer.parseInt(m.group(2)) * 100;
                 boolean isCeiling = m.group(1).equals("BKN") || m.group(1).equals("OVC");
@@ -166,7 +186,7 @@ public final class Conditions {
                 temp = (m.group(1) != null ? -1 : 1) * Integer.parseInt(m.group(2));
             }
         }
-        return new Conditions(ceiling, vis, temp, ceilingWord, visFrom, visTo);
+        return new Conditions(ceiling, vis, temp, wind, gust, ceilingWord, visFrom, visTo);
     }
 
     /** Conditions of a METAR: everything before the remarks. */
