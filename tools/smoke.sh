@@ -155,11 +155,11 @@ shot cywg-metar-history-end
 tap text TAF
 sleep 2
 shot cywg-taf
-press_in text "~TAF " 40 46
+press_in text "~KT " 40 46
 sleep 2
 shot decode-taf-first
 tap text TAF; sleep 1
-press_in text "~TAF " 120 137
+press_in text "~KT " 120 137
 sleep 2
 shot decode-taf-change-group
 tap text TAF

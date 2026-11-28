@@ -41,6 +41,7 @@ import java.util.Locale;
 import io.github.esesemdi.allmetar.core.Airport;
 import io.github.esesemdi.allmetar.core.Decode;
 import io.github.esesemdi.allmetar.core.Freq;
+import io.github.esesemdi.allmetar.core.Graph;
 import io.github.esesemdi.allmetar.core.History;
 import io.github.esesemdi.allmetar.core.Metar;
 import io.github.esesemdi.allmetar.core.Notam;
@@ -290,8 +291,11 @@ public final class DetailActivity extends Activity {
 
     // ------------------------------------------------------------ raw text whose words can be pressed
 
-    /** Raw report text; pressing a word explains it, a long press copies the whole report. */
-    private TextView words(final String text, float sp, int color, final int kind) {
+    /**
+     * Raw report text; pressing a word explains it, a long press copies the whole report.
+     * Ceiling and visibility are marked; pass the TAF itself for TAF text so its groups can be timed.
+     */
+    private TextView words(final String text, float sp, int color, final int kind, Taf taf) {
         final TextView t = Ui.text(this, "", sp, color, true);
         t.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
         final int[][] ranges = Decode.wordRanges(text);
@@ -315,6 +319,11 @@ public final class DetailActivity extends Activity {
                     // leave the word looking like the rest of the report
                 }
             }, ranges[k][0], ranges[k][1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (kind == Decode.METAR) {
+            ReportStyle.markMetar(span, text);
+        } else if (kind == Decode.TAF && taf != null) {
+            ReportStyle.markTaf(span, text, taf.validFrom, taf.validTo);
         }
         t.setText(span, TextView.BufferType.SPANNABLE);
         t.setMovementMethod(LinkMovementMethod.getInstance());
@@ -847,7 +856,7 @@ public final class DetailActivity extends Activity {
                 content.addView(Ui.divider(this));
             }
             first = false;
-            words(n.raw, 12, Ui.FG, Decode.NOTAM);
+            words(n.raw, 12, Ui.FG, Decode.NOTAM, null);
         }
     }
 
@@ -878,13 +887,14 @@ public final class DetailActivity extends Activity {
         if (latest.isEmpty()) {
             note(s.metarAt == 0 ? pending(busy) : "No METARs reported for this location.");
         } else {
-            small("TAP A WORD TO DECODE IT");
+            small("TAP A WORD TO DECODE IT · RED = SPECI OR LIFR");
         }
         for (int i = 0; i < latest.size(); i++) {
             if (i > 0) {
                 content.addView(Ui.divider(this));
             }
-            words(latest.get(i).raw, 13, Ui.FG, Decode.METAR);
+            Metar m = latest.get(i);
+            words(m.raw, 13, ReportStyle.color(m, Ui.FG), Decode.METAR, null);
         }
         Metar newest = s.latestMetar();
         if (newest != null && now - newest.obs > MainActivity.OLD_METAR) {
@@ -912,7 +922,7 @@ public final class DetailActivity extends Activity {
             }
             TextView t;
             if (slot.metar != null) {
-                t = words(slot.metar.raw, 12, Ui.FG, Decode.METAR);
+                t = words(slot.metar.raw, 12, ReportStyle.color(slot.metar, Ui.FG), Decode.METAR, null);
             } else {
                 t = add(Ui.text(this, Ui.hhmm(slot.time) + "  no report", 12, Ui.DIM, true));
             }
@@ -927,6 +937,15 @@ public final class DetailActivity extends Activity {
             warn("Weather update failed: " + s.wxError
                     + (s.tafAt > 0 ? ". Showing data as of " + Ui.dayHm(s.tafAt) + "." : "."));
         }
+        Graph graph = Graph.of(s, now);
+        if (!graph.isEmpty()) {
+            add(Ui.heading(this, "Past 7 days and TAF forecast · UTC"));
+            WeekGraphView view = new WeekGraphView(this);
+            view.setGraph(graph);
+            content.addView(view, Ui.fill());
+            TextView key = small("SOLID: OBSERVED · DASHED: TAF FORECAST · DOTTED: TEMPO / PROB · RED BAND: BELOW 500 FT");
+            key.setPadding(0, Ui.dp(this, 8), 0, 0);
+        }
         add(Ui.heading(this, "Current"));
         Taf cur = s.latestTaf();
         if (cur == null) {
@@ -937,8 +956,8 @@ public final class DetailActivity extends Activity {
             TextView w = warn("Expired " + Ui.dayHm(cur.validTo) + " and no newer TAF has been issued.");
             w.setPadding(0, 0, 0, Ui.dp(this, 6));
         }
-        small("ISSUED " + Ui.dayHm(cur.issued) + " · TAP A WORD TO DECODE IT");
-        words(TafFormat.lines(cur.raw), 13, Ui.FG, Decode.TAF);
+        small("ISSUED " + Ui.dayHm(cur.issued) + " · TAP A WORD TO DECODE IT · RED = LIFR");
+        words(TafFormat.lines(cur.raw), 13, Ui.FG, Decode.TAF, cur);
 
         if (s.tafs.size() > 1) {
             add(Ui.heading(this, "Earlier"));
@@ -949,7 +968,7 @@ public final class DetailActivity extends Activity {
                 }
                 TextView label = small("ISSUED " + Ui.dayHm(t.issued));
                 label.setPadding(0, Ui.dp(this, i > 1 ? 10 : 0), 0, 0);
-                words(TafFormat.lines(t.raw), 12, Ui.DIM, Decode.TAF);
+                words(TafFormat.lines(t.raw), 12, Ui.DIM, Decode.TAF, t);
             }
         }
     }

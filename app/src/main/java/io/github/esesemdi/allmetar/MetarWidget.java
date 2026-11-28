@@ -63,7 +63,8 @@ public final class MetarWidget extends AppWidgetProvider {
         Station s = stationId == null ? null : store.get(stationId);
         long now = App.now();
 
-        String text;
+        CharSequence text;
+        int color = 0xFFFFFFFF;
         String note = null;
         Intent tap;
         if (s == null) {
@@ -75,7 +76,8 @@ public final class MetarWidget extends AppWidgetProvider {
         } else {
             Metar m = s.latestMetar();
             if (m != null) {
-                text = m.raw;
+                text = ReportStyle.metar(m.raw);
+                color = ReportStyle.color(m, color);
             } else if (s.metarAt == 0) {
                 text = s.id + "  loading…";
             } else {
@@ -93,6 +95,7 @@ public final class MetarWidget extends AppWidgetProvider {
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_metar);
         views.setTextViewText(R.id.widget_text, text);
+        views.setTextColor(R.id.widget_text, color);
         views.setTextViewText(R.id.widget_note, note == null ? "" : note);
         views.setViewVisibility(R.id.widget_note, note == null ? View.GONE : View.VISIBLE);
         views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(context, widgetId, tap,

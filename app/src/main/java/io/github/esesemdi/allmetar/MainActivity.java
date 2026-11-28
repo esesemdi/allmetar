@@ -135,10 +135,11 @@ public final class MainActivity extends Activity {
             item.addView(head, Ui.fill());
 
             Metar m = s.latestMetar();
-            String body;
+            CharSequence body;
             int color = Ui.FG;
             if (m != null) {
-                body = m.raw;
+                body = ReportStyle.metar(m.raw);
+                color = ReportStyle.color(m, Ui.FG);
             } else if (s.metarAt == 0) {
                 body = s.wxError != null ? "Not loaded yet" : "Loading…";
                 color = Ui.DIM;
