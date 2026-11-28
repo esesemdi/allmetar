@@ -1,0 +1,2 @@
+    JobStatus{ebde287 #u0a209/4 io.github.esesemdi.allmetar/.UpdateJobService u=0 s=10209 TIME=+18s36ms:none NET satisfied:0x3600000 unsatisfied:0x90000000}: 22027959
+    JobStatus{e05ad49 #u0a209/1 io.github.esesemdi.allmetar/.UpdateJobService u=0 s=10209 TIME=+9m46s776ms:+29m46s776ms NET PERSISTED satisfied:0x3600000 unsatisfied:0x90000000}: 22596699

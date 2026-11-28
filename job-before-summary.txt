@@ -1,0 +1,57 @@
+6122:  JOB #u0a209/1: 221eae6 io.github.esesemdi.allmetar/.UpdateJobService
+6123:    u0a209 tag=*job*/io.github.esesemdi.allmetar/.UpdateJobService
+6124-    Source: uid=u0a209 user=0 pkg=io.github.esesemdi.allmetar
+6125-    JobInfo:
+6126:      Service: io.github.esesemdi.allmetar/.UpdateJobService
+6127-      PERSISTED
+6128-      Priority: 300 [DEFAULT]
+6129-      Requires: charging=false batteryNotLow=false deviceIdle=false
+6130-      Network type: NetworkRequest [ NONE id=0, [ Capabilities: INTERNET&TRUSTED&VALIDATED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10209 UnderlyingNetworks: Null] ]
+6131-      Minimum latency: +15m37s33ms
+6132-      Max execution delay: +35m37s33ms
+6133-      Backoff: policy=1 initial=+30s0ms
+6134-      Has early constraint
+6135-      Has late constraint
+6136-    Required constraints: TIMING_DELAY DEADLINE CONNECTIVITY FLEXIBILITY [0xd0200000]
+6137-    Dynamic constraints:
+6138-    Satisfied constraints: CONNECTIVITY FLEXIBILITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13600000]
+6139-    Unsatisfied constraints: TIMING_DELAY DEADLINE [0xc0000000]
+6140-    Num Required Flexible constraints: 0
+6141-    Num Dropped Flexible constraints: 0
+6142-    Constraint history:
+6143-      -5m10s452ms = FLEXIBILITY [0x200000]
+6144-      -5m10s452ms = FLEXIBILITY BACKGROUND_NOT_RESTRICTED [0x600000]
+6145-      -5m10s452ms = FLEXIBILITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED [0x2600000]
+6146-      -5m10s452ms = FLEXIBILITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3600000]
+6147-      -5m10s443ms = CONNECTIVITY FLEXIBILITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13600000]
+6148-    Uid: active
+6149-    Tracking: CONNECTIVITY TIME QUOTA
+6150-    Implicit constraints:
+6151-      readyNotDozing: true
+--
+6369:    JobStatus{221eae6 #u0a209/1 io.github.esesemdi.allmetar/.UpdateJobService u=0 s=10209 TIME=+10m26s549ms:+30m26s549ms NET PERSISTED satisfied:0x13600000 unsatisfied:0x80000000}: 22596699
+6370-    JobStatus{8f533e3 #u0a139/5 com.google.android.as/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10139 CHARGING IDLE satisfied:0x3600003 unsatisfied:0x4}: 8595258
+6371-    JobStatus{4538b5e #u0a139/6 com.google.android.as/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10139 CHARGING IDLE satisfied:0x3600003 unsatisfied:0x4}: 8595268
+6372-    JobStatus{5e97253 #u0a151/6 com.google.android.inputmethod.latin/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10151 BATNOTLOW IDLE satisfied:0x3600002 unsatisfied:0x4}: 7642549
+6373-    JobStatus{cdb9554 androidx.work.systemjobscheduler:u0a193/1 @androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10193 CHARGING IDLE satisfied:0x3600003 unsatisfied:0x4}: 7406033
+6374-    JobStatus{dd13fec #1000/882313 android/com.android.server.net.watchlist.ReportWatchlistJobService u=0 s=1000 TIME=-5m40s514ms:+11h54m19s486ms BATNOTLOW IDLE PERIODIC satisfied:0x83600002 unsatisfied:0x4}: 21629636
+6375-    JobStatus{da45c8d #u0a139/11 com.google.android.as/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10139 NET CHARGING IDLE satisfied:0x13600003 unsatisfied:0x4}: 9017332
+6376-    JobStatus{b05ea44 #1000/1740526926 android/com.android.server.BinaryTransparencyService$UpdateMeasurementsJobService u=0 s=1000 TIME=-5m36s765ms:none CHARGING IDLE satisfied:0x83600003 unsatisfied:0x4}: 21813385
+6377-    JobStatus{74f8a3 #1000/237039804 android/com.android.server.notification.NotificationHistoryJobService u=0 s=1000 TIME=+14m19s853ms:+34m19s853ms PERIODIC satisfied:0x3600000 unsatisfied:0x80000000}: 23010003
+6378-    JobStatus{640c4a0 #u0a142/10 com.google.android.apps.wellbeing/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10142 TIME=+1h6m43s306ms:none satisfied:0x3600000 unsatisfied:0x80000000}: 26453456
+6379-    JobStatus{b78c26b androidx.work.systemjobscheduler:u0a144/16 @androidx.work.systemjobscheduler@com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10144 TIME=+4h2m44s101ms:none satisfied:0x3600000 unsatisfied:0x80000000}: 39894251
+6380-    JobStatus{444c8ed NotificationBitmapJob:1000/290381858 @NotificationBitmapJob@android/com.android.server.notification.NotificationBitmapJobService u=0 s=1000 TIME=+1h0m26s538ms:none IDLE satisfied:0x3600000 unsatisfied:0x80000004}: 25776688
+6381-    JobStatus{c3d0b2a #u0a139/0 com.google.android.as/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10139 TIME=+3h54m31s125ms:none CHARGING BATNOTLOW satisfied:0x3600003 unsatisfied:0x80000000}: 36701275
+6382-    JobStatus{7079adc #u0a139/16442 com.google.android.as/com.google.android.apps.miphone.aiai.common.superpacks.impl.AiAiPersistentDownloadJobService u=0 s=10139 TIME=+2h55m40s655ms:+3h55m40s655ms NET CHARGING IDLE PERIODIC PERSISTED satisfied:0x13600003 unsatisfied:0x80000004}: 35270805
+6383-    JobStatus{5e6da04 #u0a196/8 com.google.android.permissioncontroller/com.android.permissioncontroller.permission.service.v34.SafetyLabelChangesJobService u=0 s=10196 IDLE satisfied:0x3600000 unsatisfied:0x4}: 21661780
+6384-    JobStatus{d76aac #1000/52418896 android/com.android.server.backup.FullBackupJob u=0 s=1000 NET CHARGING IDLE satisfied:0x13600003 unsatisfied:0x4}: 21822195
+6385-    JobStatus{36306 androidx.work.systemjobscheduler:u0a144/22 @androidx.work.systemjobscheduler@com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10144 NET CHARGING IDLE satisfied:0x13600003 unsatisfied:0x4}: 10516566
+6386-    JobStatus{3362539 androidx.work.systemjobscheduler:u0a129/1000 @androidx.work.systemjobscheduler@com.google.android.apps.messaging/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10129 TIME=+28m43s705ms:none satisfied:0x3600000 unsatisfied:0x80000000}: 23693855
+6387-    JobStatus{ffa974a #u0a151/11 com.google.android.inputmethod.latin/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10151 BATNOTLOW IDLE satisfied:0x3600002 unsatisfied:0x4}: 8648545
+6388-    JobStatus{3f65cfd androidx.work.systemjobscheduler:u0a193/2 @androidx.work.systemjobscheduler@com.google.android.providers.media.module/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10193 CHARGING IDLE satisfied:0x3600003 unsatisfied:0x4}: 7406042
+6389-    JobStatus{4cbe030 #1000/191934935 android/com.android.server.blob.BlobStoreIdleJobService u=0 s=1000 TIME=-5m36s651ms:+23h54m23s349ms CHARGING IDLE PERIODIC satisfied:0x83600003 unsatisfied:0x4}: 43233499
+6390-    JobStatus{b6ec068 #u0a139/315933870 com.google.android.as/com.google.android.apps.miphone.aiai.echo.scheduler.EchoJobService u=0 s=10139 TIME=-5m30s276ms:+11h54m29s724ms IDLE PERIODIC satisfied:0x83600000 unsatisfied:0x4}: 21819874
+6391-    JobStatus{4fff6fc #u0a93/-100 com.android.providers.downloads/.DownloadIdleService u=0 s=10093 TIME=-5m23s61ms:+11h54m36s939ms CHARGING IDLE PERIODIC satisfied:0x83600003 unsatisfied:0x4}: 21647089
+6392-    JobStatus{9541933 #1000/203142925 android/com.android.server.pm.DynamicCodeLoggingService u=0 s=1000 TIME=-5m41s196ms:+1h54m18s804ms BATNOTLOW IDLE PERIODIC satisfied:0x83600002 unsatisfied:0x4}: 21628954
+6393-    JobStatus{4669167 #u0a139/441325365 com.google.android.as/com.google.android.apps.miphone.aiai.echo.scheduler.EchoJobService u=0 s=10139 TIME=-5m30s261ms:+4h54m29s739ms IDLE PERIODIC satisfied:0x83600000 unsatisfied:0x4}: 21819889
+6394-    JobStatus{c9a7873 #u0a144/-484 com.google.android.googlequicksearchbox/com.google.android.apps.gsa.tasks.BackgroundTasksJobService u=0 s=10144 TIME=+1h55m49s542ms:+3h55m49s542ms NET CHARGING PERIODIC PERSISTED satisfied:0x13600003 unsatisfied:0x80000000}: 36059692
